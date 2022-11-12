@@ -29,3 +29,23 @@ test "basic reading":
     Element(kind: Number, token: "42"),
     Element(kind: Delimiter, token: "}"),
   ]
+  check read.lex("^:callable") == @[
+    Element(kind: Special, token: "^"),
+    Element(kind: Keyword, token: ":callable"),
+  ]
+  check read.lex("'(1, 2, 3)") == @[
+    Element(kind: Special, token: "'"),
+    Element(kind: Delimiter, token: "("),
+    Element(kind: Number, token: "1"),
+    Element(kind: Number, token: "2"),
+    Element(kind: Number, token: "3"),
+    Element(kind: Delimiter, token: ")"),
+  ]
+  check read.lex("`(println ~message)") == @[
+    Element(kind: Special, token: "`"),
+    Element(kind: Delimiter, token: "("),
+    Element(kind: Symbol, token: "println"),
+    Element(kind: Special, token: "~"),
+    Element(kind: Symbol, token: "message"),
+    Element(kind: Delimiter, token: ")"),
+  ]

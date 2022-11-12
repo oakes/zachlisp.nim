@@ -6,8 +6,9 @@ type
     Delimiter,
     Symbol,
     Number,
-    Dispatch,
     Keyword,
+    Dispatch,
+    Special,
   Element* = object
     kind*: ElementKind
     token*: string
@@ -18,6 +19,7 @@ const
   whitespace = {' ', '\t', ','}
   hash = '#'
   colon = ':'
+  specialChars = {'^', '\'', '`', '~'}
 
 func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Element] =
   var temp = Element(kind: Whitespace, token: "")
@@ -49,13 +51,16 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       of whitespace:
         save(result, Whitespace, str, {Whitespace})
         continue
-      of hash:
-        save(result, Dispatch, str, {})
-        continue
       of colon:
         save(result, Keyword, str, {Keyword})
         continue
+      of hash:
+        save(result, Dispatch, str, {Symbol, Keyword})
+        continue
+      of specialChars:
+        save(result, Special, str, {})
+        continue
       else:
         discard
-    save(result, Symbol, str, {Symbol, Number, Dispatch, Keyword})
+    save(result, Symbol, str, {Symbol, Number, Keyword, Dispatch})
   flush(result)
