@@ -1,9 +1,12 @@
 import unicode
+import tables
 
 type
   ElementKind* = enum
+    Collection,
     Whitespace,
-    Delimiter,
+    OpenDelimiter,
+    CloseDelimiter,
     Symbol,
     Number,
     Keyword,
@@ -12,12 +15,21 @@ type
     Comment,
     String,
     Character,
+  ErrorKind* = enum
+    None,
+    UnmatchedDelimiter,
+    NoClosingDelimiter,
   Element* = object
-    kind*: ElementKind
-    token*: string
+    case kind*: ElementKind
+    of Collection:
+      elements*: seq[Element]
+    else:
+      token*: string
+    error*: ErrorKind
 
 const
-  delims = {'(', ')', '[', ']', '{', '}'}
+  openDelims = {'(', '[', '{'}
+  closeDelims = {')', ']', '}'}
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
@@ -28,6 +40,22 @@ const
   doublequote = '"'
   backslash = '\\'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
+  delimPairs = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+    "#{": "}",
+  }.toTable
+
+func `==`*(a, b: Element): bool =
+  if a.kind == b.kind:
+    case a.kind:
+    of Collection:
+      a.elements == b.elements and a.error == b.error
+    else:
+      a.token == b.token and a.error == b.error
+  else:
+    false
 
 func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Element] =
   var
@@ -79,11 +107,14 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     # fast path for ascii chars
     if str.len == 1:
       case ch:
-      of delims:
+      of openDelims:
         if ch == '{':
-          save(result, Delimiter, str, {Dispatch})
+          save(result, OpenDelimiter, str, {Dispatch})
         else:
-          save(result, Delimiter, str, {})
+          save(result, OpenDelimiter, str, {})
+        continue
+      of closeDelims:
+        save(result, CloseDelimiter, str, {})
         continue
       of digits:
         save(result, Number, str, {Number, Symbol})
@@ -116,3 +147,44 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     save(result, Symbol, str, {Symbol, Number, Keyword, Dispatch})
 
   flush(result)
+
+func parse*(elements: seq[Element], index: var int, elem: Element): seq[Element]
+
+func parseCollection*(elements: seq[Element], index: var int, delimiter: Element): Element =
+  result = Element(kind: Collection, elements: @[delimiter])
+  let closeDelim = delimPairs[delimiter.token]
+  while index < elements.len:
+    let elem = elements[index]
+    index += 1
+    case elem.kind:
+    of CloseDelimiter:
+      if elem.token == closeDelim:
+        result.elements.add(elem)
+        return
+      else:
+        index -= 1
+        result.error = UnmatchedDelimiter
+        return
+    else:
+      result.elements &= parse(elements, index, elem)
+  result.error = NoClosingDelimiter
+
+func parse*(elements: seq[Element], index: var int, elem: Element): seq[Element] =
+  case elem.kind:
+  of OpenDelimiter:
+    result.add(parseCollection(elements, index, elem))
+  else:
+    result.add(elem)
+
+func parse*(elements: seq[Element], index: var int): seq[Element] =
+  while index < elements.len:
+    let elem = elements[index]
+    index += 1
+    result &= parse(elements, index, elem)
+
+func parse*(elements: seq[Element]): seq[Element] =
+  var index = 0
+  parse(elements, index)
+
+func readString*(code: string): seq[Element] =
+  code.lex().parse()
