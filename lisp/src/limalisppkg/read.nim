@@ -9,6 +9,7 @@ type
     Keyword,
     Dispatch,
     Special,
+    Comment,
   Element* = object
     kind*: ElementKind
     token*: string
@@ -16,10 +17,12 @@ type
 const
   delims = {'(', ')', '[', ']', '{', '}'}
   digits = {'0'..'9'}
-  whitespace = {' ', '\t', ','}
+  whitespace = {' ', '\t', ',', '\n'}
   hash = '#'
   colon = ':'
   specialChars = {'^', '\'', '`', '~'}
+  newline = '\n'
+  semicolon = ';'
 
 func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Element] =
   var temp = Element(kind: Whitespace, token: "")
@@ -30,7 +33,9 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     temp = Element(kind: Whitespace, token: "")
 
   proc save(res: var seq[Element], kind: ElementKind, str: string, compatibleTypes: set[ElementKind]) =
-    if temp.kind notin compatibleTypes:
+    if temp.kind == Comment and str[0] != newline:
+      discard
+    elif temp.kind notin compatibleTypes:
       flush(res)
       temp.kind = kind
     elif temp.kind == Dispatch:
@@ -43,7 +48,10 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       let ch = str[0]
       case ch:
       of delims:
-        save(result, Delimiter, str, if ch == '{': {Dispatch} else: {})
+        if ch == '{':
+          save(result, Delimiter, str, {Dispatch})
+        else:
+          save(result, Delimiter, str, {})
         continue
       of digits:
         save(result, Number, str, {Number, Symbol})
@@ -59,6 +67,9 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         continue
       of specialChars:
         save(result, Special, str, {})
+        continue
+      of semicolon:
+        save(result, Comment, str, {})
         continue
       else:
         discard
