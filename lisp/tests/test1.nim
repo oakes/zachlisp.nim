@@ -58,3 +58,23 @@ test "basic reading":
     Element(kind: Number, token: "1"),
     Element(kind: Delimiter, token: ")"),
   ]
+  check read.lex("\"hello\"") == @[
+    Element(kind: String, token: "\"hello\""),
+  ]
+  check read.lex("\"hello \\\"world\\\"\"") == @[
+    Element(kind: String, token: "\"hello \\\"world\\\"\""),
+  ]
+  check read.lex("\\n") == @[
+    Element(kind: Character, token: "\\n"),
+  ]
+  check read.lex("\\;") == @[
+    Element(kind: Character, token: "\\;"),
+  ]
+  check read.lex("\\ n") == @[
+    Element(kind: Character, token: "\\"),
+    Element(kind: Symbol, token: "n"),
+  ]
+  check read.lex("\\space;hello") == @[
+    Element(kind: Character, token: "\\space"),
+    Element(kind: Comment, token: ";hello"),
+  ]
