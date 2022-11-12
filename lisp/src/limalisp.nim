@@ -1,4 +1,2 @@
-import limalisppkg/submodule
-
 when isMainModule:
-  echo(getWelcomeMessage())
+  echo "Hello, world!"
