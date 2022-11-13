@@ -34,11 +34,11 @@ test "lexing":
     Element(kind: CloseDelimiter, token: "}"),
   ]
   check read.lex("^:callable") == @[
-    Element(kind: Special, token: "^"),
+    Element(kind: SpecialCharacter, token: "^"),
     Element(kind: Keyword, token: ":callable"),
   ]
   check read.lex("'(1, 2, 3)") == @[
-    Element(kind: Special, token: "'"),
+    Element(kind: SpecialCharacter, token: "'"),
     Element(kind: OpenDelimiter, token: "("),
     Element(kind: Number, token: "1"),
     Element(kind: Number, token: "2"),
@@ -46,10 +46,10 @@ test "lexing":
     Element(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("`(println ~message)") == @[
-    Element(kind: Special, token: "`"),
+    Element(kind: SpecialCharacter, token: "`"),
     Element(kind: OpenDelimiter, token: "("),
     Element(kind: Symbol, token: "println"),
-    Element(kind: Special, token: "~"),
+    Element(kind: SpecialCharacter, token: "~"),
     Element(kind: Symbol, token: "message"),
     Element(kind: CloseDelimiter, token: ")"),
   ]
@@ -112,19 +112,29 @@ test "parsing":
     ),
   ]
   check read.parse(read.lex("(1}")) == @[
-    Element(kind: Collection, elements: @[
-        Element(kind: OpenDelimiter, token: "("),
-        Element(kind: Number, token: "1"),
-      ],
-      error: UnmatchedDelimiter,
-    ),
-    Element(kind: CloseDelimiter, token: "}"),
+    Element(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+    Element(kind: Number, token: "1"),
+    Element(kind: CloseDelimiter, token: "}", error: NoMatchingOpenDelimiter),
   ]
   check read.parse(read.lex("(1")) == @[
-    Element(kind: Collection, elements: @[
+    Element(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+    Element(kind: Number, token: "1"),
+  ]
+  check read.parse(read.lex("`(println ~message)")) == @[
+    Element(kind: SpecialPair, elements: @[
+      Element(kind: SpecialCharacter, token: "`"),
+      Element(kind: Collection, elements: @[
         Element(kind: OpenDelimiter, token: "("),
-        Element(kind: Number, token: "1"),
-      ],
-      error: NoClosingDelimiter,
-    ),
+        Element(kind: Symbol, token: "println"),
+        Element(kind: SpecialPair, elements: @[
+          Element(kind: SpecialCharacter, token: "~"),
+          Element(kind: Symbol, token: "message"),
+        ]),
+        Element(kind: CloseDelimiter, token: ")"),
+      ]),
+    ]),
+  ]
+  check read.parse(read.lex("`(")) == @[
+    Element(kind: SpecialCharacter, token: "`", error: NothingValidAfter),
+    Element(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
   ]

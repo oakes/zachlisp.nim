@@ -4,6 +4,7 @@ import tables
 type
   ElementKind* = enum
     Collection,
+    SpecialPair,
     Whitespace,
     OpenDelimiter,
     CloseDelimiter,
@@ -11,17 +12,18 @@ type
     Number,
     Keyword,
     Dispatch,
-    Special,
+    SpecialCharacter,
     Comment,
     String,
     Character,
   ErrorKind* = enum
     None,
-    UnmatchedDelimiter,
-    NoClosingDelimiter,
+    NoMatchingOpenDelimiter,
+    NoMatchingCloseDelimiter,
+    NothingValidAfter,
   Element* = object
     case kind*: ElementKind
-    of Collection:
+    of Collection, SpecialPair:
       elements*: seq[Element]
     else:
       token*: string
@@ -50,7 +52,7 @@ const
 func `==`*(a, b: Element): bool =
   if a.kind == b.kind:
     case a.kind:
-    of Collection:
+    of Collection, SpecialPair:
       a.elements == b.elements and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
@@ -129,7 +131,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         save(result, Dispatch, str, {Symbol, Keyword})
         continue
       of specialCharacters:
-        save(result, Special, str, {})
+        save(result, SpecialCharacter, str, {})
         continue
       of semicolon:
         save(result, Comment, str, {})
@@ -148,43 +150,63 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
 
   flush(result)
 
-func parse*(elements: seq[Element], index: var int, elem: Element): seq[Element]
+func parse*(elements: seq[Element], index: var int): seq[Element]
 
-func parseCollection*(elements: seq[Element], index: var int, delimiter: Element): Element =
-  result = Element(kind: Collection, elements: @[delimiter])
+func parseCollection*(elements: seq[Element], index: var int, delimiter: Element): seq[Element] =
+  var coll = Element(kind: Collection, elements: @[delimiter])
   let closeDelim = delimPairs[delimiter.token]
   while index < elements.len:
     let elem = elements[index]
-    index += 1
     case elem.kind:
     of CloseDelimiter:
       if elem.token == closeDelim:
-        result.elements.add(elem)
-        return
+        index += 1
+        coll.elements.add(elem)
+        return @[coll]
       else:
-        index -= 1
-        result.error = UnmatchedDelimiter
-        return
+        coll.elements[0].error = NoMatchingCloseDelimiter
+        return coll.elements
     else:
-      result.elements &= parse(elements, index, elem)
-  result.error = NoClosingDelimiter
-
-func parse*(elements: seq[Element], index: var int, elem: Element): seq[Element] =
-  case elem.kind:
-  of OpenDelimiter:
-    result.add(parseCollection(elements, index, elem))
-  else:
-    result.add(elem)
+      coll.elements.add(parse(elements, index))
+  coll.elements[0].error = NoMatchingCloseDelimiter
+  coll.elements
 
 func parse*(elements: seq[Element], index: var int): seq[Element] =
-  while index < elements.len:
-    let elem = elements[index]
-    index += 1
-    result &= parse(elements, index, elem)
+  if index == elements.len:
+    return @[]
+
+  let elem = elements[index]
+  index += 1
+
+  case elem.kind:
+  of OpenDelimiter:
+    parseCollection(elements, index, elem)
+  of CloseDelimiter:
+    var res = elem
+    res.error = NoMatchingOpenDelimiter
+    @[res]
+  else:
+    if elem.kind == SpecialCharacter:
+      if index < elements.len:
+        let nextElems = parse(elements, index)
+        if nextElems.len == 1 and nextElems[0].error == None:
+          @[Element(kind: SpecialPair, elements: @[elem] & nextElems)]
+        else:
+          index -= 1
+          var res = elem
+          res.error = NothingValidAfter
+          @[res]
+      else:
+        var res = elem
+        res.error = NothingValidAfter
+        @[res]
+    else:
+      @[elem]
 
 func parse*(elements: seq[Element]): seq[Element] =
   var index = 0
-  parse(elements, index)
+  while index < elements.len:
+    result.add(parse(elements, index))
 
 func readString*(code: string): seq[Element] =
   code.lex().parse()
