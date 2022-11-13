@@ -134,7 +134,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         save(result, Element(kind: SpecialCharacter, token: str), {SpecialCharacter})
         continue
       of hash:
-        save(result, Element(kind: SpecialSymbol, token: str), {})
+        save(result, Element(kind: SpecialSymbol, token: str), {Symbol})
         continue
       of semicolon:
         save(result, Element(kind: Comment, token: str), {})

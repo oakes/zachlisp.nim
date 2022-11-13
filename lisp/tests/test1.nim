@@ -93,6 +93,9 @@ test "lexing":
   check read.lex("#uuid") == @[
     Element(kind: SpecialSymbol, token: "#uuid"),
   ]
+  check read.lex("hello#") == @[
+    Element(kind: Symbol, token: "hello#"),
+  ]
 
 test "parsing":
   check read.parse(read.lex("(+ 1 1)")) == @[
