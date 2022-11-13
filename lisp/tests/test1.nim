@@ -53,6 +53,14 @@ test "lexing":
     Element(kind: Symbol, token: "message"),
     Element(kind: CloseDelimiter, token: ")"),
   ]
+  check read.lex("`(println ~@messages)") == @[
+    Element(kind: SpecialCharacter, token: "`"),
+    Element(kind: OpenDelimiter, token: "("),
+    Element(kind: Symbol, token: "println"),
+    Element(kind: SpecialCharacter, token: "~@"),
+    Element(kind: Symbol, token: "messages"),
+    Element(kind: CloseDelimiter, token: ")"),
+  ]
   check read.lex("""; hello world
 (+ 1 1)""") == @[
     Element(kind: Comment, token: "; hello world"),

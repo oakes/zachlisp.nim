@@ -36,7 +36,7 @@ const
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
   colon = ':'
-  specialCharacters = {'^', '\'', '`', '~'}
+  specialCharacters = {'^', '\'', '`', '~', '@'}
   newline = '\n'
   semicolon = ';'
   doublequote = '"'
@@ -131,7 +131,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         save(result, Dispatch, str, {Symbol, Keyword})
         continue
       of specialCharacters:
-        save(result, SpecialCharacter, str, {})
+        save(result, SpecialCharacter, str, {SpecialCharacter})
         continue
       of semicolon:
         save(result, Comment, str, {})
