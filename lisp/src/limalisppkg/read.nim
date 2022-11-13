@@ -221,5 +221,5 @@ func parse*(elements: seq[Element]): seq[Element] =
   while index < elements.len:
     result.add(parse(elements, index))
 
-func readString*(code: string): seq[Element] =
+func read*(code: string): seq[Element] =
   code.lex().parse()
