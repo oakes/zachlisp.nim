@@ -28,6 +28,7 @@ type
       elements*: seq[Element]
     else:
       token*: string
+      position*: tuple[line: int, column: int]
     error*: ErrorKind
 
 const
@@ -67,6 +68,8 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
   var
     temp = emptyElement
     escaping = false
+    line = 1
+    column = 1
 
   proc flush(res: var seq[Element]) =
     if temp != emptyElement and temp.kind notin discardTypes:
@@ -78,16 +81,22 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       temp.token &= elem.token
     else:
       flush(res)
-      let prefix = temp.token
       temp = elem
-      temp.token = prefix & temp.token
 
   for rune in code.runes:
     let
       str = $rune
       ch = str[0]
       esc = escaping
+      position = (line: line, column: column)
+
     escaping = (not escaping and ch == backslash)
+
+    if ch == newline:
+      line += 1
+      column = 1
+    else:
+      column += 1
 
     # deal with types that can contain a stream of arbitrary characters
     case temp.kind:
@@ -116,47 +125,47 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       case ch:
       of openDelims:
         if ch == '{' and temp == specialSymbolElement:
-          temp = Element(kind: OpenDelimiter, token: temp.token & str)
+          temp = Element(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
         else:
-          save(result, Element(kind: OpenDelimiter, token: str), {})
+          save(result, Element(kind: OpenDelimiter, token: str, position: position), {})
         continue
       of closeDelims:
-        save(result, Element(kind: CloseDelimiter, token: str), {})
+        save(result, Element(kind: CloseDelimiter, token: str, position: position), {})
         continue
       of digits:
-        save(result, Element(kind: Number, token: str), {Number, Symbol, Keyword})
+        save(result, Element(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
         continue
       of whitespace:
-        save(result, Element(kind: Whitespace, token: str), {Whitespace})
+        save(result, Element(kind: Whitespace, token: str, position: position), {Whitespace})
         continue
       of colon:
-        save(result, Element(kind: Keyword, token: str), {Keyword})
+        save(result, Element(kind: Keyword, token: str, position: position), {Keyword})
         continue
       of specialCharacters:
-        save(result, Element(kind: SpecialCharacter, token: str), {SpecialCharacter})
+        save(result, Element(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
         continue
       of hash:
-        save(result, Element(kind: SpecialSymbol, token: str), {Symbol, Keyword})
+        save(result, Element(kind: SpecialSymbol, token: str, position: position), {Symbol, Keyword})
         continue
       of semicolon:
-        save(result, Element(kind: Comment, token: str), {})
+        save(result, Element(kind: Comment, token: str, position: position), {})
         continue
       of doublequote:
-        save(result, Element(kind: String, token: str), {})
+        save(result, Element(kind: String, token: str, position: position), {})
         continue
       of backslash:
-        save(result, Element(kind: Character, token: str), {})
+        save(result, Element(kind: Character, token: str, position: position), {})
         continue
       of underscore:
         if temp == specialSymbolElement:
-          temp = Element(kind: SpecialSymbol, token: temp.token & str)
+          temp = Element(kind: SpecialSymbol, token: temp.token & str, position: position)
           flush(result)
           continue
       else:
         discard
 
     # all other chars
-    save(result, Element(kind: Symbol, token: str), {Symbol, Number, Keyword, SpecialSymbol})
+    save(result, Element(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword, SpecialSymbol})
 
   if temp.kind == String:
     temp.error = NoMatchingUnquote

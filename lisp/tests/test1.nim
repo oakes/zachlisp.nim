@@ -105,6 +105,17 @@ test "lexing":
   check read.lex("hello#") == @[
     Element(kind: Symbol, token: "hello#"),
   ]
+  block:
+    let elems = read.lex("""; hello
+(+ 1 1)
+:foo""")
+    check elems[0].position == (1, 1) # ; hello
+    check elems[1].position == (2, 1) # (
+    check elems[2].position == (2, 2) # +
+    check elems[3].position == (2, 4) # 1
+    check elems[4].position == (2, 6) # 1
+    check elems[5].position == (2, 7) # 1
+    check elems[6].position == (3, 1) # :foo
 
 test "parsing":
   check read.parse(read.lex("(+ 1 1)")) == @[
