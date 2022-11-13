@@ -3,10 +3,7 @@ import tables
 
 type
   CellKind* = enum
-    List,
-    Vector,
-    Map,
-    Set,
+    Collection,
     SpecialPair,
     Whitespace,
     OpenDelimiter,
@@ -15,7 +12,6 @@ type
     Number,
     Keyword,
     SpecialCharacter,
-    SpecialSymbol,
     Comment,
     String,
     Character,
@@ -23,12 +19,11 @@ type
     None,
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
-    InvalidDelimiter,
     NothingValidAfter,
     NoMatchingUnquote,
   Cell* = object
     case kind*: CellKind
-    of List, Vector, Map, Set, SpecialPair:
+    of Collection, SpecialPair:
       cells*: seq[Cell]
     else:
       token*: string
@@ -49,23 +44,18 @@ const
   backslash = '\\'
   underscore = '_'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
-  openList = "("
-  openVector = "["
-  openMap = "{"
-  openSet = "#{"
   delimPairs = {
-    openList: ")",
-    openVector: "]",
-    openMap: "}",
-    openSet: "}",
+    "(": ")",
+    "[": "]",
+    "{": "}",
   }.toTable
   emptyCell = Cell(kind: Whitespace, token: "")
-  hashCell = Cell(kind: SpecialSymbol, token: $hash)
+  dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
 
 func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:
     case a.kind:
-    of List, Vector, Map, Set, SpecialPair:
+    of Collection, SpecialPair:
       a.cells == b.cells and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
@@ -132,10 +122,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     if str.len == 1:
       case ch:
       of openDelims:
-        if temp == hashCell:
-          temp = Cell(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
-        else:
-          save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
+        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
         continue
       of closeDelims:
         save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
@@ -153,7 +140,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
         continue
       of hash:
-        save(result, Cell(kind: SpecialSymbol, token: str, position: position), {Symbol, Keyword})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol, Keyword})
         continue
       of semicolon:
         save(result, Cell(kind: Comment, token: str, position: position), {})
@@ -165,15 +152,15 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         save(result, Cell(kind: Character, token: str, position: position), {})
         continue
       of underscore:
-        if temp == hashCell:
-          temp = Cell(kind: SpecialSymbol, token: temp.token & str, position: position)
+        if temp == dispatchCell:
+          temp = Cell(kind: SpecialCharacter, token: temp.token & str, position: position)
           flush(result)
           continue
       else:
         discard
 
     # all other chars
-    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword, SpecialSymbol})
+    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword})
 
   if temp.kind == String:
     temp.error = NoMatchingUnquote
@@ -183,18 +170,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
 func parse*(cells: seq[Cell], index: var int): seq[Cell]
 
 func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Cell] =
-  var coll =
-    case delimiter.token:
-    of openList:
-      Cell(kind: List, cells: @[delimiter])
-    of openVector:
-      Cell(kind: Vector, cells: @[delimiter])
-    of openMap:
-      Cell(kind: Map, cells: @[delimiter])
-    of openSet:
-      Cell(kind: Set, cells: @[delimiter])
-    else:
-      Cell(kind: List, cells: @[delimiter], error: InvalidDelimiter)
+  var collCells = @[delimiter]
   let closeDelim = delimPairs[delimiter.token]
   while index < cells.len:
     let cell = cells[index]
@@ -202,15 +178,15 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
     of CloseDelimiter:
       if cell.token == closeDelim:
         index += 1
-        coll.cells.add(cell)
-        return @[coll]
+        collCells.add(cell)
+        return @[Cell(kind: Collection, cells: collCells)]
       else:
-        coll.cells[0].error = NoMatchingCloseDelimiter
-        return coll.cells
+        collCells[0].error = NoMatchingCloseDelimiter
+        return collCells
     else:
-      coll.cells.add(parse(cells, index))
-  coll.cells[0].error = NoMatchingCloseDelimiter
-  coll.cells
+      collCells.add(parse(cells, index))
+  collCells[0].error = NoMatchingCloseDelimiter
+  collCells
 
 func parse*(cells: seq[Cell], index: var int): seq[Cell] =
   if index == cells.len:
@@ -227,7 +203,7 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
     res.error = NoMatchingOpenDelimiter
     @[res]
   else:
-    if cell.kind in {SpecialCharacter, SpecialSymbol}:
+    if cell.kind == SpecialCharacter:
       if index < cells.len:
         let nextCells = parse(cells, index)
         if nextCells.len == 1 and nextCells[0].error == None:

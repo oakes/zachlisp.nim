@@ -21,7 +21,8 @@ test "lexing":
     Cell(kind: CloseDelimiter, token: "]"),
   ]
   check read.lex("#{1 2 3}") == @[
-    Cell(kind: OpenDelimiter, token: "#{"),
+    Cell(kind: SpecialCharacter, token: "#"),
+    Cell(kind: OpenDelimiter, token: "{"),
     Cell(kind: Number, token: "1"),
     Cell(kind: Number, token: "2"),
     Cell(kind: Number, token: "3"),
@@ -100,7 +101,8 @@ test "lexing":
     Cell(kind: Comment, token: ";hello"),
   ]
   check read.lex("#uuid") == @[
-    Cell(kind: SpecialSymbol, token: "#uuid"),
+    Cell(kind: SpecialCharacter, token: "#"),
+    Cell(kind: Symbol, token: "uuid"),
   ]
   check read.lex("hello#") == @[
     Cell(kind: Symbol, token: "hello#"),
@@ -119,7 +121,7 @@ test "lexing":
 
 test "parsing":
   check read.parse(read.lex("(+ 1 1)")) == @[
-    Cell(kind: List, cells: @[
+    Cell(kind: Collection, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "+"),
         Cell(kind: Number, token: "1"),
@@ -129,7 +131,7 @@ test "parsing":
     ),
   ]
   check read.parse(read.lex("[1 2 3]")) == @[
-    Cell(kind: Vector, cells: @[
+    Cell(kind: Collection, cells: @[
         Cell(kind: OpenDelimiter, token: "["),
         Cell(kind: Number, token: "1"),
         Cell(kind: Number, token: "2"),
@@ -139,17 +141,20 @@ test "parsing":
     ),
   ]
   check read.parse(read.lex("#{1 2 3}")) == @[
-    Cell(kind: Set, cells: @[
-        Cell(kind: OpenDelimiter, token: "#{"),
-        Cell(kind: Number, token: "1"),
-        Cell(kind: Number, token: "2"),
-        Cell(kind: Number, token: "3"),
-        Cell(kind: CloseDelimiter, token: "}"),
-      ],
-    ),
+    Cell(kind: SpecialPair, cells: @[
+      Cell(kind: SpecialCharacter, token: "#"),
+      Cell(kind: Collection, cells: @[
+          Cell(kind: OpenDelimiter, token: "{"),
+          Cell(kind: Number, token: "1"),
+          Cell(kind: Number, token: "2"),
+          Cell(kind: Number, token: "3"),
+          Cell(kind: CloseDelimiter, token: "}"),
+        ],
+      ),
+    ])
   ]
   check read.parse(read.lex("{:foo 1 :bar 2}")) == @[
-    Cell(kind: Map, cells: @[
+    Cell(kind: Collection, cells: @[
         Cell(kind: OpenDelimiter, token: "{"),
         Cell(kind: Keyword, token: ":foo"),
         Cell(kind: Number, token: "1"),
@@ -159,12 +164,25 @@ test "parsing":
       ],
     ),
   ]
+  check read.parse(read.lex("#(+ 1 1)")) == @[
+    Cell(kind: SpecialPair, cells: @[
+      Cell(kind: SpecialCharacter, token: "#"),
+      Cell(kind: Collection, cells: @[
+          Cell(kind: OpenDelimiter, token: "("),
+          Cell(kind: Symbol, token: "+"),
+          Cell(kind: Number, token: "1"),
+          Cell(kind: Number, token: "1"),
+          Cell(kind: CloseDelimiter, token: ")"),
+        ],
+      ),
+    ])
+  ]
   check read.parse(read.lex("(+ 1 (/ 2 3))")) == @[
-    Cell(kind: List, cells: @[
+    Cell(kind: Collection, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "+"),
         Cell(kind: Number, token: "1"),
-        Cell(kind: List, cells: @[
+        Cell(kind: Collection, cells: @[
             Cell(kind: OpenDelimiter, token: "("),
             Cell(kind: Symbol, token: "/"),
             Cell(kind: Number, token: "2"),
@@ -188,7 +206,7 @@ test "parsing":
   check read.parse(read.lex("`(println ~message)")) == @[
     Cell(kind: SpecialPair, cells: @[
       Cell(kind: SpecialCharacter, token: "`"),
-      Cell(kind: List, cells: @[
+      Cell(kind: Collection, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "println"),
         Cell(kind: SpecialPair, cells: @[
@@ -205,13 +223,14 @@ test "parsing":
   ]
   check read.parse(read.lex("#mytag hello")) == @[
     Cell(kind: SpecialPair, cells: @[
-      Cell(kind: SpecialSymbol, token: "#mytag"),
-      Cell(kind: Symbol, token: "hello"),
+      Cell(kind: SpecialCharacter, token: "#"),
+      Cell(kind: Symbol, token: "mytag"),
     ]),
+    Cell(kind: Symbol, token: "hello"),
   ]
   check read.parse(read.lex("#_hello")) == @[
     Cell(kind: SpecialPair, cells: @[
-      Cell(kind: SpecialSymbol, token: "#_"),
+      Cell(kind: SpecialCharacter, token: "#_"),
       Cell(kind: Symbol, token: "hello"),
     ]),
   ]
