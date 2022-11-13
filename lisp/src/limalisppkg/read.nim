@@ -12,6 +12,7 @@ type
     Number,
     Keyword,
     SpecialCharacter,
+    SpecialSymbol,
     Comment,
     String,
     Character,
@@ -34,13 +35,14 @@ const
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
-  dispatchElement = Element(kind: SpecialCharacter, token: $hash)
+  specialSymbolElement = Element(kind: SpecialSymbol, token: $hash)
   colon = ':'
-  specialCharacters = {'#', '^', '\'', '`', '~', '@'}
+  specialCharacters = {'^', '\'', '`', '~', '@'}
   newline = '\n'
   semicolon = ';'
   doublequote = '"'
   backslash = '\\'
+  underscore = '_'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
   delimPairs = {
     "(": ")",
@@ -111,7 +113,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     if str.len == 1:
       case ch:
       of openDelims:
-        if ch == '{' and temp == dispatchElement:
+        if ch == '{' and temp == specialSymbolElement:
           temp = Element(kind: OpenDelimiter, token: temp.token & str)
         else:
           save(result, Element(kind: OpenDelimiter, token: str), {})
@@ -131,6 +133,9 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       of specialCharacters:
         save(result, Element(kind: SpecialCharacter, token: str), {SpecialCharacter})
         continue
+      of hash:
+        save(result, Element(kind: SpecialSymbol, token: str), {})
+        continue
       of semicolon:
         save(result, Element(kind: Comment, token: str), {})
         continue
@@ -140,11 +145,16 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       of backslash:
         save(result, Element(kind: Character, token: str), {})
         continue
+      of underscore:
+        if temp == specialSymbolElement:
+          temp = Element(kind: SpecialSymbol, token: temp.token & str)
+          flush(result)
+          continue
       else:
         discard
 
     # all other chars
-    save(result, Element(kind: Symbol, token: str), {Symbol, Number, Keyword})
+    save(result, Element(kind: Symbol, token: str), {Symbol, Number, Keyword, SpecialSymbol})
 
   flush(result)
 
@@ -184,7 +194,7 @@ func parse*(elements: seq[Element], index: var int): seq[Element] =
     res.error = NoMatchingOpenDelimiter
     @[res]
   else:
-    if elem.kind == SpecialCharacter:
+    if elem.kind in {SpecialCharacter, SpecialSymbol}:
       if index < elements.len:
         let nextElems = parse(elements, index)
         if nextElems.len == 1 and nextElems[0].error == None:

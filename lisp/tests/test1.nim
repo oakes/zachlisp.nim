@@ -90,6 +90,9 @@ test "lexing":
     Element(kind: Character, token: "\\space"),
     Element(kind: Comment, token: ";hello"),
   ]
+  check read.lex("#uuid") == @[
+    Element(kind: SpecialSymbol, token: "#uuid"),
+  ]
 
 test "parsing":
   check read.parse(read.lex("(+ 1 1)")) == @[
@@ -145,4 +148,16 @@ test "parsing":
   check read.parse(read.lex("`(")) == @[
     Element(kind: SpecialCharacter, token: "`", error: NothingValidAfter),
     Element(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+  ]
+  check read.parse(read.lex("#mytag hello")) == @[
+    Element(kind: SpecialPair, elements: @[
+      Element(kind: SpecialSymbol, token: "#mytag"),
+      Element(kind: Symbol, token: "hello"),
+    ]),
+  ]
+  check read.parse(read.lex("#_hello")) == @[
+    Element(kind: SpecialPair, elements: @[
+      Element(kind: SpecialSymbol, token: "#_"),
+      Element(kind: Symbol, token: "hello"),
+    ]),
   ]
