@@ -2,7 +2,7 @@ import unicode
 import tables
 
 type
-  ElementKind* = enum
+  CellKind* = enum
     Collection,
     SpecialPair,
     Whitespace,
@@ -22,10 +22,10 @@ type
     NoMatchingCloseDelimiter,
     NothingValidAfter,
     NoMatchingUnquote,
-  Element* = object
-    case kind*: ElementKind
+  Cell* = object
+    case kind*: CellKind
     of Collection, SpecialPair:
-      elements*: seq[Element]
+      cells*: seq[Cell]
     else:
       token*: string
       position*: tuple[line: int, column: int]
@@ -51,37 +51,37 @@ const
     "{": "}",
     "#{": "}",
   }.toTable
-  emptyElement = Element(kind: Whitespace, token: "")
-  specialSymbolElement = Element(kind: SpecialSymbol, token: $hash)
+  emptyCell = Cell(kind: Whitespace, token: "")
+  specialSymbolCell = Cell(kind: SpecialSymbol, token: $hash)
 
-func `==`*(a, b: Element): bool =
+func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:
     case a.kind:
     of Collection, SpecialPair:
-      a.elements == b.elements and a.error == b.error
+      a.cells == b.cells and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
   else:
     false
 
-func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Element] =
+func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
   var
-    temp = emptyElement
+    temp = emptyCell
     escaping = false
     line = 1
     column = 1
 
-  proc flush(res: var seq[Element]) =
-    if temp != emptyElement and temp.kind notin discardTypes:
+  proc flush(res: var seq[Cell]) =
+    if temp != emptyCell and temp.kind notin discardTypes:
       res.add(temp)
-    temp = emptyElement
+    temp = emptyCell
 
-  proc save(res: var seq[Element], elem: Element, compatibleTypes: set[ElementKind]) =
+  proc save(res: var seq[Cell], cell: Cell, compatibleTypes: set[CellKind]) =
     if temp.kind in compatibleTypes:
-      temp.token &= elem.token
+      temp.token &= cell.token
     else:
       flush(res)
-      temp = elem
+      temp = cell
 
   for rune in code.runes:
     let
@@ -124,111 +124,111 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     if str.len == 1:
       case ch:
       of openDelims:
-        if ch == '{' and temp == specialSymbolElement:
-          temp = Element(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
+        if ch == '{' and temp == specialSymbolCell:
+          temp = Cell(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
         else:
-          save(result, Element(kind: OpenDelimiter, token: str, position: position), {})
+          save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
         continue
       of closeDelims:
-        save(result, Element(kind: CloseDelimiter, token: str, position: position), {})
+        save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
         continue
       of digits:
-        save(result, Element(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
+        save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
         continue
       of whitespace:
-        save(result, Element(kind: Whitespace, token: str, position: position), {Whitespace})
+        save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace})
         continue
       of colon:
-        save(result, Element(kind: Keyword, token: str, position: position), {Keyword})
+        save(result, Cell(kind: Keyword, token: str, position: position), {Keyword})
         continue
       of specialCharacters:
-        save(result, Element(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
         continue
       of hash:
-        save(result, Element(kind: SpecialSymbol, token: str, position: position), {Symbol, Keyword})
+        save(result, Cell(kind: SpecialSymbol, token: str, position: position), {Symbol, Keyword})
         continue
       of semicolon:
-        save(result, Element(kind: Comment, token: str, position: position), {})
+        save(result, Cell(kind: Comment, token: str, position: position), {})
         continue
       of doublequote:
-        save(result, Element(kind: String, token: str, position: position), {})
+        save(result, Cell(kind: String, token: str, position: position), {})
         continue
       of backslash:
-        save(result, Element(kind: Character, token: str, position: position), {})
+        save(result, Cell(kind: Character, token: str, position: position), {})
         continue
       of underscore:
-        if temp == specialSymbolElement:
-          temp = Element(kind: SpecialSymbol, token: temp.token & str, position: position)
+        if temp == specialSymbolCell:
+          temp = Cell(kind: SpecialSymbol, token: temp.token & str, position: position)
           flush(result)
           continue
       else:
         discard
 
     # all other chars
-    save(result, Element(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword, SpecialSymbol})
+    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword, SpecialSymbol})
 
   if temp.kind == String:
     temp.error = NoMatchingUnquote
 
   flush(result)
 
-func parse*(elements: seq[Element], index: var int): seq[Element]
+func parse*(cells: seq[Cell], index: var int): seq[Cell]
 
-func parseCollection*(elements: seq[Element], index: var int, delimiter: Element): seq[Element] =
-  var coll = Element(kind: Collection, elements: @[delimiter])
+func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Cell] =
+  var coll = Cell(kind: Collection, cells: @[delimiter])
   let closeDelim = delimPairs[delimiter.token]
-  while index < elements.len:
-    let elem = elements[index]
-    case elem.kind:
+  while index < cells.len:
+    let cell = cells[index]
+    case cell.kind:
     of CloseDelimiter:
-      if elem.token == closeDelim:
+      if cell.token == closeDelim:
         index += 1
-        coll.elements.add(elem)
+        coll.cells.add(cell)
         return @[coll]
       else:
-        coll.elements[0].error = NoMatchingCloseDelimiter
-        return coll.elements
+        coll.cells[0].error = NoMatchingCloseDelimiter
+        return coll.cells
     else:
-      coll.elements.add(parse(elements, index))
-  coll.elements[0].error = NoMatchingCloseDelimiter
-  coll.elements
+      coll.cells.add(parse(cells, index))
+  coll.cells[0].error = NoMatchingCloseDelimiter
+  coll.cells
 
-func parse*(elements: seq[Element], index: var int): seq[Element] =
-  if index == elements.len:
+func parse*(cells: seq[Cell], index: var int): seq[Cell] =
+  if index == cells.len:
     return @[]
 
-  let elem = elements[index]
+  let cell = cells[index]
   index += 1
 
-  case elem.kind:
+  case cell.kind:
   of OpenDelimiter:
-    parseCollection(elements, index, elem)
+    parseCollection(cells, index, cell)
   of CloseDelimiter:
-    var res = elem
+    var res = cell
     res.error = NoMatchingOpenDelimiter
     @[res]
   else:
-    if elem.kind in {SpecialCharacter, SpecialSymbol}:
-      if index < elements.len:
-        let nextElems = parse(elements, index)
-        if nextElems.len == 1 and nextElems[0].error == None:
-          @[Element(kind: SpecialPair, elements: @[elem] & nextElems)]
+    if cell.kind in {SpecialCharacter, SpecialSymbol}:
+      if index < cells.len:
+        let nextCells = parse(cells, index)
+        if nextCells.len == 1 and nextCells[0].error == None:
+          @[Cell(kind: SpecialPair, cells: @[cell] & nextCells)]
         else:
           index -= 1
-          var res = elem
+          var res = cell
           res.error = NothingValidAfter
           @[res]
       else:
-        var res = elem
+        var res = cell
         res.error = NothingValidAfter
         @[res]
     else:
-      @[elem]
+      @[cell]
 
-func parse*(elements: seq[Element]): seq[Element] =
+func parse*(cells: seq[Cell]): seq[Cell] =
   var index = 0
-  while index < elements.len:
-    result.add(parse(elements, index))
+  while index < cells.len:
+    result.add(parse(cells, index))
 
-func read*(code: string): seq[Element] =
+func read*(code: string): seq[Cell] =
   code.lex().parse()
