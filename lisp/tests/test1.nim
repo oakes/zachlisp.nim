@@ -76,14 +76,23 @@ test "lexing":
   check read.lex("\"hello \\\"world\\\"\"") == @[
     Element(kind: String, token: "\"hello \\\"world\\\"\""),
   ]
+  check read.lex("\"hello") == @[
+    Element(kind: String, token: "\"hello", error: NoMatchingUnquote),
+  ]
+  check read.lex(":hello123") == @[
+    Element(kind: Keyword, token: ":hello123"),
+  ]
   check read.lex("\\n") == @[
     Element(kind: Character, token: "\\n"),
+  ]
+  check read.lex("\\1") == @[
+    Element(kind: Character, token: "\\1"),
   ]
   check read.lex("\\;") == @[
     Element(kind: Character, token: "\\;"),
   ]
   check read.lex("\\ n") == @[
-    Element(kind: Character, token: "\\"),
+    Element(kind: Character, token: "\\", error: NothingValidAfter),
     Element(kind: Symbol, token: "n"),
   ]
   check read.lex("\\space;hello") == @[

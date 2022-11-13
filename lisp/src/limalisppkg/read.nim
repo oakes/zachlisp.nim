@@ -21,6 +21,7 @@ type
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
     NothingValidAfter,
+    NoMatchingUnquote,
   Element* = object
     case kind*: ElementKind
     of Collection, SpecialPair:
@@ -73,13 +74,13 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     temp = emptyElement
 
   proc save(res: var seq[Element], elem: Element, compatibleTypes: set[ElementKind]) =
-    if temp.kind notin compatibleTypes:
+    if temp.kind in compatibleTypes:
+      temp.token &= elem.token
+    else:
       flush(res)
       let prefix = temp.token
       temp = elem
       temp.token = prefix & temp.token
-    else:
-      temp.token &= elem.token
 
   for rune in code.runes:
     let
@@ -92,14 +93,14 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     case temp.kind:
     of Character:
       if ch in invalidAfterCharacter or (ch == semicolon and temp.token.len > 1):
+        if temp.token.len == 1:
+          temp.error = NothingValidAfter
         flush(result)
       else:
         temp.token &= str
         continue
     of Comment:
-      if ch == newline:
-        flush(result)
-      else:
+      if ch != newline:
         temp.token &= str
         continue
     of String:
@@ -123,7 +124,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         save(result, Element(kind: CloseDelimiter, token: str), {})
         continue
       of digits:
-        save(result, Element(kind: Number, token: str), {Number, Symbol})
+        save(result, Element(kind: Number, token: str), {Number, Symbol, Keyword})
         continue
       of whitespace:
         save(result, Element(kind: Whitespace, token: str), {Whitespace})
@@ -135,7 +136,7 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
         save(result, Element(kind: SpecialCharacter, token: str), {SpecialCharacter})
         continue
       of hash:
-        save(result, Element(kind: SpecialSymbol, token: str), {Symbol})
+        save(result, Element(kind: SpecialSymbol, token: str), {Symbol, Keyword})
         continue
       of semicolon:
         save(result, Element(kind: Comment, token: str), {})
@@ -156,6 +157,9 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
 
     # all other chars
     save(result, Element(kind: Symbol, token: str), {Symbol, Number, Keyword, SpecialSymbol})
+
+  if temp.kind == String:
+    temp.error = NoMatchingUnquote
 
   flush(result)
 
