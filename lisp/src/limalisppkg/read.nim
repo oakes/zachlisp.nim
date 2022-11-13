@@ -1,5 +1,4 @@
-import unicode
-import tables
+import unicode, tables
 
 type
   CellKind* = enum
@@ -19,6 +18,7 @@ type
     None,
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
+    MustHaveEvenNumberOfForms,
     NothingValidAfter,
     NoMatchingUnquote,
     InvalidEscape,
@@ -55,7 +55,9 @@ const
     "(": ")",
     "[": "]",
     "{": "}",
+    "#{": "}",
   }.toTable
+  mapOpenDelim = "{"
   emptyCell = Cell(kind: Whitespace, token: "")
   dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
 
@@ -148,7 +150,11 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     if str.len == 1:
       case ch:
       of openDelims:
-        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
+        if ch == '{' and temp == dispatchCell:
+          temp = Cell(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
+          flush(result)
+        else:
+          save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
         continue
       of closeDelims:
         save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
@@ -204,7 +210,10 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
     of CloseDelimiter:
       if cell.token == closeDelim:
         index += 1
-        return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
+        if delimiter.token == mapOpenDelim and contents.len mod 2 != 0:
+          return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
+        else:
+          return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
       else:
         var delim = delimiter
         delim.error = NoMatchingCloseDelimiter
@@ -234,12 +243,11 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
       if index < cells.len:
         let nextCells = parse(cells, index)
         if nextCells.len == 1 and nextCells[0].error == None:
-          @[Cell(kind: SpecialPair, pair: @[cell] & nextCells)]
+          @[Cell(kind: SpecialPair, pair: @[cell, nextCells[0]])]
         else:
-          index -= 1
           var res = cell
           res.error = NothingValidAfter
-          @[res]
+          @[res] & nextCells
       else:
         var res = cell
         res.error = NothingValidAfter

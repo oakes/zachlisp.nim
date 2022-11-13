@@ -47,6 +47,7 @@ const
     "(": List,
     "[": Vector,
     "{": Map,
+    "#{": Set,
   }.toTable
 
 func `==`*(a, b: Cell): bool =

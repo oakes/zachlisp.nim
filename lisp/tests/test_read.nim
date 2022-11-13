@@ -21,8 +21,7 @@ test "lexing":
     Cell(kind: CloseDelimiter, token: "]"),
   ]
   check read.lex("#{1 2 3}") == @[
-    Cell(kind: SpecialCharacter, token: "#"),
-    Cell(kind: OpenDelimiter, token: "{"),
+    Cell(kind: OpenDelimiter, token: "#{"),
     Cell(kind: Number, token: "1"),
     Cell(kind: Number, token: "2"),
     Cell(kind: Number, token: "3"),
@@ -143,18 +142,15 @@ test "parsing":
     ),
   ]
   check read.parse(read.lex("#{1 2 3}")) == @[
-    Cell(kind: SpecialPair, pair: @[
-      Cell(kind: SpecialCharacter, token: "#"),
-      Cell(
-        kind: Collection,
-        delims: @[Cell(kind: OpenDelimiter, token: "{"), Cell(kind: CloseDelimiter, token: "}")],
-        contents: @[
-          Cell(kind: Number, token: "1"),
-          Cell(kind: Number, token: "2"),
-          Cell(kind: Number, token: "3"),
-        ],
-      ),
-    ])
+    Cell(
+      kind: Collection,
+      delims: @[Cell(kind: OpenDelimiter, token: "#{"), Cell(kind: CloseDelimiter, token: "}")],
+      contents: @[
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Number, token: "2"),
+        Cell(kind: Number, token: "3"),
+      ],
+    ),
   ]
   check read.parse(read.lex("{:foo 1 :bar 2}")) == @[
     Cell(
@@ -166,6 +162,18 @@ test "parsing":
         Cell(kind: Keyword, token: ":bar"),
         Cell(kind: Number, token: "2"),
       ],
+    ),
+  ]
+  check read.parse(read.lex("{:foo 1 :bar}")) == @[
+    Cell(
+      kind: Collection,
+      delims: @[Cell(kind: OpenDelimiter, token: "{"), Cell(kind: CloseDelimiter, token: "}")],
+      contents: @[
+        Cell(kind: Keyword, token: ":foo"),
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Keyword, token: ":bar"),
+      ],
+      error: MustHaveEvenNumberOfForms,
     ),
   ]
   check read.parse(read.lex("#(+ 1 1)")) == @[
@@ -180,7 +188,7 @@ test "parsing":
           Cell(kind: Number, token: "1"),
         ],
       ),
-    ])
+    ]),
   ]
   check read.parse(read.lex("(+ 1 (/ 2 3))")) == @[
     Cell(
