@@ -23,8 +23,11 @@ type
     NoMatchingUnquote,
   Cell* = object
     case kind*: CellKind
-    of Collection, SpecialPair:
-      cells*: seq[Cell]
+    of Collection:
+      delims*: seq[Cell]
+      contents*: seq[Cell]
+    of SpecialPair:
+      pair*: seq[Cell]
     else:
       token*: string
       position*: tuple[line: int, column: int]
@@ -55,8 +58,10 @@ const
 func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:
     case a.kind:
-    of Collection, SpecialPair:
-      a.cells == b.cells and a.error == b.error
+    of Collection:
+      a.delims == b.delims and a.contents == b.contents and a.error == b.error
+    of SpecialPair:
+      a.pair == b.pair and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
   else:
@@ -170,7 +175,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
 func parse*(cells: seq[Cell], index: var int): seq[Cell]
 
 func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Cell] =
-  var collCells = @[delimiter]
+  var contents: seq[Cell] = @[]
   let closeDelim = delimPairs[delimiter.token]
   while index < cells.len:
     let cell = cells[index]
@@ -178,15 +183,16 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
     of CloseDelimiter:
       if cell.token == closeDelim:
         index += 1
-        collCells.add(cell)
-        return @[Cell(kind: Collection, cells: collCells)]
+        return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
       else:
-        collCells[0].error = NoMatchingCloseDelimiter
-        return collCells
+        var delim = delimiter
+        delim.error = NoMatchingCloseDelimiter
+        return @[delim] & contents
     else:
-      collCells.add(parse(cells, index))
-  collCells[0].error = NoMatchingCloseDelimiter
-  collCells
+      contents.add(parse(cells, index))
+  var delim = delimiter
+  delim.error = NoMatchingCloseDelimiter
+  @[delim] & contents
 
 func parse*(cells: seq[Cell], index: var int): seq[Cell] =
   if index == cells.len:
@@ -207,7 +213,7 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
       if index < cells.len:
         let nextCells = parse(cells, index)
         if nextCells.len == 1 and nextCells[0].error == None:
-          @[Cell(kind: SpecialPair, cells: @[cell] & nextCells)]
+          @[Cell(kind: SpecialPair, pair: @[cell] & nextCells)]
         else:
           index -= 1
           var res = cell
