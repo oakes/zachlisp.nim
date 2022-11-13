@@ -71,13 +71,13 @@ test "lexing":
     Cell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("\"hello\"") == @[
-    Cell(kind: String, token: "\"hello\"", stringValue: "hello"),
+    Cell(kind: String, stringToken: "\"hello\"", stringValue: "hello"),
   ]
   check read.lex("\"hello \\\"world\\\"\"") == @[
-    Cell(kind: String, token: "\"hello \\\"world\\\"\"", stringValue: "hello \\\"world\\\""),
+    Cell(kind: String, stringToken: "\"hello \\\"world\\\"\"", stringValue: "hello \\\"world\\\""),
   ]
   check read.lex("\"hello") == @[
-    Cell(kind: String, token: "\"hello", error: NoMatchingUnquote),
+    Cell(kind: String, stringToken: "\"hello", error: NoMatchingUnquote),
   ]
   check read.lex(":hello123") == @[
     Cell(kind: Keyword, token: ":hello123"),

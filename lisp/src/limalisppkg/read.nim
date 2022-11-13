@@ -22,6 +22,7 @@ type
     NothingValidAfter,
     NoMatchingUnquote,
     InvalidEscape,
+  Position = tuple[line: int, column: int]
   Cell* = object
     case kind*: CellKind
     of Collection:
@@ -31,10 +32,11 @@ type
       pair*: seq[Cell]
     of String:
       stringValue*: string
+      stringToken*: string
+      stringPosition*: Position
     else:
-      discard
-    token*: string
-    position*: tuple[line: int, column: int]
+      token*: string
+      position*: Position
     error*: ErrorKind
 
 const
@@ -69,7 +71,7 @@ func `==`*(a, b: Cell): bool =
     of SpecialPair:
       a.pair == b.pair and a.error == b.error
     of String:
-      a.stringValue == b.stringValue
+      a.stringToken == b.stringToken and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
   else:
@@ -124,12 +126,12 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         temp.token &= str
         continue
     of String:
-      temp.token &= str
+      temp.stringToken &= str
       if ch == doublequote and not esc:
         var
           stresc = false
           str = ""
-        for r in temp.token[1 ..< temp.token.len-1].runes:
+        for r in temp.stringToken[1 ..< temp.stringToken.len-1].runes:
           let s = $r
           if stresc:
             case s:
@@ -178,7 +180,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         save(result, Cell(kind: Comment, token: str, position: position), {})
         continue
       of doublequote:
-        save(result, Cell(kind: String, token: str, position: position), {})
+        save(result, Cell(kind: String, stringToken: str, stringPosition: position), {})
         continue
       of backslash:
         save(result, Cell(kind: Character, token: str, position: position), {})
