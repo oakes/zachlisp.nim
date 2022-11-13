@@ -119,7 +119,7 @@ test "lexing":
 
 test "parsing":
   check read.parse(read.lex("(+ 1 1)")) == @[
-    Cell(kind: Collection, cells: @[
+    Cell(kind: List, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "+"),
         Cell(kind: Number, token: "1"),
@@ -128,12 +128,43 @@ test "parsing":
       ],
     ),
   ]
+  check read.parse(read.lex("[1 2 3]")) == @[
+    Cell(kind: Vector, cells: @[
+        Cell(kind: OpenDelimiter, token: "["),
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Number, token: "2"),
+        Cell(kind: Number, token: "3"),
+        Cell(kind: CloseDelimiter, token: "]"),
+      ],
+    ),
+  ]
+  check read.parse(read.lex("#{1 2 3}")) == @[
+    Cell(kind: Set, cells: @[
+        Cell(kind: OpenDelimiter, token: "#{"),
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Number, token: "2"),
+        Cell(kind: Number, token: "3"),
+        Cell(kind: CloseDelimiter, token: "}"),
+      ],
+    ),
+  ]
+  check read.parse(read.lex("{:foo 1 :bar 2}")) == @[
+    Cell(kind: Map, cells: @[
+        Cell(kind: OpenDelimiter, token: "{"),
+        Cell(kind: Keyword, token: ":foo"),
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Keyword, token: ":bar"),
+        Cell(kind: Number, token: "2"),
+        Cell(kind: CloseDelimiter, token: "}"),
+      ],
+    ),
+  ]
   check read.parse(read.lex("(+ 1 (/ 2 3))")) == @[
-    Cell(kind: Collection, cells: @[
+    Cell(kind: List, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "+"),
         Cell(kind: Number, token: "1"),
-        Cell(kind: Collection, cells: @[
+        Cell(kind: List, cells: @[
             Cell(kind: OpenDelimiter, token: "("),
             Cell(kind: Symbol, token: "/"),
             Cell(kind: Number, token: "2"),
@@ -157,7 +188,7 @@ test "parsing":
   check read.parse(read.lex("`(println ~message)")) == @[
     Cell(kind: SpecialPair, cells: @[
       Cell(kind: SpecialCharacter, token: "`"),
-      Cell(kind: Collection, cells: @[
+      Cell(kind: List, cells: @[
         Cell(kind: OpenDelimiter, token: "("),
         Cell(kind: Symbol, token: "println"),
         Cell(kind: SpecialPair, cells: @[
