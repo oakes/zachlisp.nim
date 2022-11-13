@@ -11,7 +11,6 @@ type
     Symbol,
     Number,
     Keyword,
-    Dispatch,
     SpecialCharacter,
     Comment,
     String,
@@ -35,8 +34,9 @@ const
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
+  dispatchElement = Element(kind: SpecialCharacter, token: $hash)
   colon = ':'
-  specialCharacters = {'^', '\'', '`', '~', '@'}
+  specialCharacters = {'#', '^', '\'', '`', '~', '@'}
   newline = '\n'
   semicolon = ';'
   doublequote = '"'
@@ -69,13 +69,14 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
       res.add(temp)
     temp = Element(kind: Whitespace, token: "")
 
-  proc save(res: var seq[Element], kind: ElementKind, str: string, compatibleTypes: set[ElementKind]) =
+  proc save(res: var seq[Element], elem: Element, compatibleTypes: set[ElementKind]) =
     if temp.kind notin compatibleTypes:
       flush(res)
-      temp.kind = kind
-    elif temp.kind == Dispatch:
-      temp.kind = kind
-    temp.token &= str
+      let prefix = temp.token
+      temp = elem
+      temp.token = prefix & temp.token
+    else:
+      temp.token &= elem.token
 
   for rune in code.runes:
     let
@@ -110,43 +111,40 @@ func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Elem
     if str.len == 1:
       case ch:
       of openDelims:
-        if ch == '{':
-          save(result, OpenDelimiter, str, {Dispatch})
+        if ch == '{' and temp == dispatchElement:
+          temp = Element(kind: OpenDelimiter, token: temp.token & str)
         else:
-          save(result, OpenDelimiter, str, {})
+          save(result, Element(kind: OpenDelimiter, token: str), {})
         continue
       of closeDelims:
-        save(result, CloseDelimiter, str, {})
+        save(result, Element(kind: CloseDelimiter, token: str), {})
         continue
       of digits:
-        save(result, Number, str, {Number, Symbol})
+        save(result, Element(kind: Number, token: str), {Number, Symbol})
         continue
       of whitespace:
-        save(result, Whitespace, str, {Whitespace})
+        save(result, Element(kind: Whitespace, token: str), {Whitespace})
         continue
       of colon:
-        save(result, Keyword, str, {Keyword})
-        continue
-      of hash:
-        save(result, Dispatch, str, {Symbol, Keyword})
+        save(result, Element(kind: Keyword, token: str), {Keyword})
         continue
       of specialCharacters:
-        save(result, SpecialCharacter, str, {SpecialCharacter})
+        save(result, Element(kind: SpecialCharacter, token: str), {SpecialCharacter})
         continue
       of semicolon:
-        save(result, Comment, str, {})
+        save(result, Element(kind: Comment, token: str), {})
         continue
       of doublequote:
-        save(result, String, str, {})
+        save(result, Element(kind: String, token: str), {})
         continue
       of backslash:
-        save(result, Character, str, {})
+        save(result, Element(kind: Character, token: str), {})
         continue
       else:
         discard
 
     # all other chars
-    save(result, Symbol, str, {Symbol, Number, Keyword, Dispatch})
+    save(result, Element(kind: Symbol, token: str), {Symbol, Number, Keyword})
 
   flush(result)
 
