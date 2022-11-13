@@ -35,7 +35,6 @@ const
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
-  specialSymbolElement = Element(kind: SpecialSymbol, token: $hash)
   colon = ':'
   specialCharacters = {'^', '\'', '`', '~', '@'}
   newline = '\n'
@@ -50,6 +49,8 @@ const
     "{": "}",
     "#{": "}",
   }.toTable
+  emptyElement = Element(kind: Whitespace, token: "")
+  specialSymbolElement = Element(kind: SpecialSymbol, token: $hash)
 
 func `==`*(a, b: Element): bool =
   if a.kind == b.kind:
@@ -63,13 +64,13 @@ func `==`*(a, b: Element): bool =
 
 func lex*(code: string, discardTypes: set[ElementKind] = {Whitespace}): seq[Element] =
   var
-    temp = Element(kind: Whitespace, token: "")
+    temp = emptyElement
     escaping = false
 
   proc flush(res: var seq[Element]) =
-    if temp.kind notin discardTypes:
+    if temp != emptyElement and temp.kind notin discardTypes:
       res.add(temp)
-    temp = Element(kind: Whitespace, token: "")
+    temp = emptyElement
 
   proc save(res: var seq[Element], elem: Element, compatibleTypes: set[ElementKind]) =
     if temp.kind notin compatibleTypes:
