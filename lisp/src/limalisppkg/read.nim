@@ -21,6 +21,7 @@ type
     NoMatchingCloseDelimiter,
     NothingValidAfter,
     NoMatchingUnquote,
+    InvalidEscape,
   Cell* = object
     case kind*: CellKind
     of Collection:
@@ -28,9 +29,12 @@ type
       contents*: seq[Cell]
     of SpecialPair:
       pair*: seq[Cell]
+    of String:
+      stringValue*: string
     else:
-      token*: string
-      position*: tuple[line: int, column: int]
+      discard
+    token*: string
+    position*: tuple[line: int, column: int]
     error*: ErrorKind
 
 const
@@ -62,6 +66,8 @@ func `==`*(a, b: Cell): bool =
       a.delims == b.delims and a.contents == b.contents and a.error == b.error
     of SpecialPair:
       a.pair == b.pair and a.error == b.error
+    of String:
+      a.stringValue == b.stringValue
     else:
       a.token == b.token and a.error == b.error
   else:
@@ -118,6 +124,21 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     of String:
       temp.token &= str
       if ch == doublequote and not esc:
+        var
+          stresc = false
+          str = ""
+        for r in temp.token[1 ..< temp.token.len-1].runes:
+          let s = $r
+          if stresc:
+            case s:
+            of "\"", "\\":
+              str &= s
+            else:
+              temp.error = InvalidEscape
+          else:
+            str &= s
+          stresc = not stresc and s[0] == backslash
+        temp.stringValue = str
         flush(result)
       continue
     else:

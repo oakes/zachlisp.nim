@@ -6,6 +6,7 @@ type
   CellKind* = enum
     Error,
     Long,
+    String,
     Fn,
     List,
     Vector,
@@ -13,6 +14,7 @@ type
     Set,
   ErrorKind* = enum
     NotImplemented,
+    InvalidToken,
     VarDoesNotExist,
     EmptyFnInvocation,
     NumberParseError,
@@ -24,6 +26,8 @@ type
       error*: ErrorKind
     of Long:
       longVal*: int64
+    of String:
+      stringVal: string
     of Fn:
       fnVal*: proc (cells: seq[Cell]): Cell {.noSideEffect.}
     of List:
@@ -34,6 +38,7 @@ type
       mapVal*: Table[Cell, Cell]
     of Set:
       setVal*: HashSet[Cell]
+    readCell*: read.Cell
   Context* = object
     vars*: Table[string, Cell]
 
@@ -51,6 +56,8 @@ func `==`*(a, b: Cell): bool =
       a.error == b.error
     of Long:
       a.longVal == b.longVal
+    of String:
+      a.stringVal == b.stringVal
     of Fn:
       a.fnVal == b.fnVal
     of List:
@@ -71,7 +78,7 @@ func plus*(args: seq[Cell]): Cell =
     of Long:
       res += arg.longVal
     else:
-      return Cell(kind: Error, error: CantAddValue)
+      return Cell(kind: Error, error: CantAddValue, readCell: arg.readCell)
   Cell(kind: Long, longVal: res)
 
 func initContext*(): Context =
@@ -81,9 +88,11 @@ func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
     fn.fnVal(args)
   else:
-    Cell(kind: Error, error: NotAFunction)
+    Cell(kind: Error, error: NotAFunction, readCell: fn.readCell)
 
 func eval*(ctx: Context, cell: read.Cell): Cell =
+  if cell.error != read.None:
+    return Cell(kind: Error, error: InvalidToken, readCell: cell)
   case cell.kind:
   of read.Collection:
     let typ = delimToType[cell.delims[0].token]
@@ -99,23 +108,27 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
       if cells.len > 0:
         return invoke(ctx, cells[0], cells[1 ..< cells.len])
       else:
-        Cell(kind: Error, error: EmptyFnInvocation)
+        Cell(kind: Error, error: EmptyFnInvocation, readCell: cell)
     else:
-      Cell(kind: Error, error: NotImplemented)
+      Cell(kind: Error, error: NotImplemented, readCell: cell)
   of read.Symbol:
     if cell.token in ctx.vars:
-      ctx.vars[cell.token]
+      var ret = ctx.vars[cell.token]
+      ret.readCell = cell
+      ret
     else:
-      Cell(kind: Error, error: VarDoesNotExist)
+      Cell(kind: Error, error: VarDoesNotExist, readCell: cell)
   of read.Number:
     var res: int
     try:
       parseutils.parseInt(cell.token, res)
     except ValueError:
-      return Cell(kind: Error, error: NumberParseError)
-    Cell(kind: Long, longVal: res.int64)
+      return Cell(kind: Error, error: NumberParseError, readCell: cell)
+    Cell(kind: Long, longVal: res.int64, readCell: cell)
+  of read.String:
+    Cell(kind: String, stringVal: cell.stringValue, readCell: cell)
   else:
-    Cell(kind: Error, error: NotImplemented)
+    Cell(kind: Error, error: NotImplemented, readCell: cell)
 
 func eval*(cell: read.Cell): Cell =
   var ctx = initContext()

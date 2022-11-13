@@ -72,10 +72,10 @@ test "lexing":
     Cell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("\"hello\"") == @[
-    Cell(kind: String, token: "\"hello\""),
+    Cell(kind: String, token: "\"hello\"", stringValue: "hello"),
   ]
   check read.lex("\"hello \\\"world\\\"\"") == @[
-    Cell(kind: String, token: "\"hello \\\"world\\\"\""),
+    Cell(kind: String, token: "\"hello \\\"world\\\"\"", stringValue: "hello \\\"world\\\""),
   ]
   check read.lex("\"hello") == @[
     Cell(kind: String, token: "\"hello", error: NoMatchingUnquote),
