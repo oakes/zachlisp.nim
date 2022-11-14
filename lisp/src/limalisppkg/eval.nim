@@ -19,7 +19,7 @@ type
     EmptyFnInvocation,
     NumberParseError,
     NotAFunction,
-    CantAddValue,
+    InvalidType,
   Cell* = object
     case kind*: CellKind
     of Error:
@@ -79,7 +79,7 @@ func plus*(args: seq[Cell]): Cell =
     of Long:
       res += arg.longVal
     else:
-      return Cell(kind: Error, error: CantAddValue, readCell: arg.readCell)
+      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
   Cell(kind: Long, longVal: res)
 
 func initContext*(): Context =
