@@ -22,6 +22,7 @@ type
     NothingValidAfter,
     NoMatchingUnquote,
     InvalidEscape,
+    InvalidDelimiter,
   Position = tuple[line: int, column: int]
   Cell* = object
     case kind*: CellKind
@@ -59,7 +60,6 @@ const
     "{": "}",
     "#{": "}",
   }.toTable
-  mapOpenDelim = "{"
   emptyCell = Cell(kind: Whitespace, token: "")
   dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
 
@@ -152,11 +152,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     if str.len == 1:
       case ch:
       of openDelims:
-        if ch == '{' and temp == dispatchCell:
-          temp = Cell(kind: OpenDelimiter, token: temp.token & str, position: temp.position)
-          flush(result)
-        else:
-          save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
+        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
         continue
       of closeDelims:
         save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
@@ -212,7 +208,7 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
     of CloseDelimiter:
       if cell.token == closeDelim:
         index += 1
-        if delimiter.token == mapOpenDelim and contents.len mod 2 != 0:
+        if delimiter.token[0] == '{' and contents.len mod 2 != 0:
           return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
         else:
           return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
@@ -244,12 +240,24 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
     if cell.kind == SpecialCharacter:
       if index < cells.len:
         let nextCells = parse(cells, index)
-        if nextCells.len == 1 and nextCells[0].error == None:
-          @[Cell(kind: SpecialPair, pair: @[cell, nextCells[0]])]
-        else:
-          var res = cell
-          res.error = NothingValidAfter
-          @[res] & nextCells
+        if nextCells.len == 1:
+          let nextCell = nextCells[0]
+          if cell.token[0] == hash and
+              nextCell.kind == Collection and
+              nextCell.error in {None, MustHaveEvenNumberOfForms}:
+            var res = nextCells[0]
+            res.delims[0].token = cell.token & res.delims[0].token
+            if res.delims[0].token in delimPairs:
+              # uneven number of forms is not an error if it's a set now
+              res.error = None
+            else:
+              res.error = InvalidDelimiter
+            return @[res]
+          elif nextCell.error == None:
+            return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
+        var res = cell
+        res.error = NothingValidAfter
+        @[res] & nextCells
       else:
         var res = cell
         res.error = NothingValidAfter

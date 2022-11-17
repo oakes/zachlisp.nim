@@ -96,7 +96,8 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
     return Cell(kind: Error, error: InvalidToken, readCell: cell)
   case cell.kind:
   of read.Collection:
-    let typ = delimToType[cell.delims[0].token]
+    let delim = cell.delims[0].token
+    let typ = delimToType[delim]
     case typ:
     of List:
       var cells: seq[Cell]

@@ -21,7 +21,8 @@ test "lexing":
     Cell(kind: CloseDelimiter, token: "]"),
   ]
   check read.lex("#{1 2 3}") == @[
-    Cell(kind: OpenDelimiter, token: "#{"),
+    Cell(kind: SpecialCharacter, token: "#"),
+    Cell(kind: OpenDelimiter, token: "{"),
     Cell(kind: Number, token: "1"),
     Cell(kind: Number, token: "2"),
     Cell(kind: Number, token: "3"),
@@ -177,18 +178,16 @@ test "parsing":
     ),
   ]
   check read.parse(read.lex("#(+ 1 1)")) == @[
-    Cell(kind: SpecialPair, pair: @[
-      Cell(kind: SpecialCharacter, token: "#"),
-      Cell(
-        kind: Collection,
-        delims: @[Cell(kind: OpenDelimiter, token: "("), Cell(kind: CloseDelimiter, token: ")")],
-        contents: @[
-          Cell(kind: Symbol, token: "+"),
-          Cell(kind: Number, token: "1"),
-          Cell(kind: Number, token: "1"),
-        ],
-      ),
-    ]),
+    Cell(
+      kind: Collection,
+      delims: @[Cell(kind: OpenDelimiter, token: "#("), Cell(kind: CloseDelimiter, token: ")")],
+      contents: @[
+        Cell(kind: Symbol, token: "+"),
+        Cell(kind: Number, token: "1"),
+        Cell(kind: Number, token: "1"),
+      ],
+      error: InvalidDelimiter,
+    ),
   ]
   check read.parse(read.lex("(+ 1 (/ 2 3))")) == @[
     Cell(
