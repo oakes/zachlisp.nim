@@ -1,4 +1,4 @@
-import unicode, tables
+import unicode, tables, sets
 
 type
   CellKind* = enum
@@ -43,6 +43,12 @@ type
 const
   openDelims = {'(', '[', '{'}
   closeDelims = {')', ']', '}'}
+  delimPairs = {
+    '(': ')',
+    '[': ']',
+    '{': '}',
+  }.toTable
+  validOpenDelims = ["(", "[", "{", "#{"].toHashSet
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
@@ -54,12 +60,6 @@ const
   backslash = '\\'
   underscore = '_'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
-  delimPairs = {
-    "(": ")",
-    "[": "]",
-    "{": "}",
-    "#{": "}",
-  }.toTable
   emptyCell = Cell(kind: Whitespace, token: "")
   dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
 
@@ -201,12 +201,12 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell]
 
 func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Cell] =
   var contents: seq[Cell] = @[]
-  let closeDelim = delimPairs[delimiter.token]
+  let closeDelim = delimPairs[delimiter.token[0]]
   while index < cells.len:
     let cell = cells[index]
     case cell.kind:
     of CloseDelimiter:
-      if cell.token == closeDelim:
+      if cell.token[0] == closeDelim:
         index += 1
         if delimiter.token[0] == '{' and contents.len mod 2 != 0:
           return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
@@ -247,7 +247,7 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
               nextCell.error in {None, MustHaveEvenNumberOfForms}:
             var res = nextCells[0]
             res.delims[0].token = cell.token & res.delims[0].token
-            if res.delims[0].token in delimPairs:
+            if res.delims[0].token in validOpenDelims:
               # uneven number of forms is not an error if it's a set now
               res.error = None
             else:
