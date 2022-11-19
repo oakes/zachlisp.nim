@@ -219,24 +219,14 @@ func minus*(args: seq[Cell]): Cell =
   checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   if isAllLongs(args):
-    var res: int64 = 0
-    var i = 0
-    for arg in args:
-      if i == 0:
-        res = arg.longVal
-      else:
-        res -= arg.longVal
-      i += 1
+    var res: int64 = args[0].longVal
+    for arg in args[1 ..< args.len]:
+      res -= arg.longVal
     Cell(kind: Long, longVal: res)
   else:
-    var res: float64 = 0.0
-    var i = 0
-    for arg in args:
-      if i == 0:
-        res = arg.toDouble
-      else:
-        res -= arg.toDouble
-      i += 1
+    var res: float64 = args[0].toDouble
+    for arg in args[1 ..< args.len]:
+      res -= arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
 func times*(args: seq[Cell]): Cell =
@@ -255,14 +245,9 @@ func times*(args: seq[Cell]): Cell =
 func divide*(args: seq[Cell]): Cell =
   checkCount(args.len, 1)
   checkKind(args, {Long, Double})
-  var res: float64 = 1.0
-  var i = 0
-  for arg in args:
-    if i == 0:
-      res = arg.toDouble
-    else:
-      res /= arg.toDouble
-    i += 1
+  var res: float64 = args[0].toDouble
+  for arg in args[1 ..< args.len]:
+    res /= arg.toDouble
   Cell(kind: Double, doubleVal: res)
 
 func pow*(args: seq[Cell]): Cell =
