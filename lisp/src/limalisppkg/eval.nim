@@ -5,6 +5,7 @@ from parseutils import nil
 type
   CellKind* = enum
     Error,
+    Boolean,
     Long,
     Double,
     String,
@@ -25,12 +26,14 @@ type
     case kind*: CellKind
     of Error:
       error*: ErrorKind
+    of Boolean:
+      booleanVal*: bool
     of Long:
       longVal*: int64
     of Double:
       doubleVal*: float64
     of String:
-      stringVal: string
+      stringVal*: string
     of Fn:
       fnVal*: proc (cells: seq[Cell]): Cell {.noSideEffect.}
     of List:
@@ -58,6 +61,8 @@ func `==`*(a, b: Cell): bool =
     case a.kind:
     of Error:
       a.error == b.error
+    of Boolean:
+      a.booleanVal == b.booleanVal
     of Long:
       a.longVal == b.longVal
     of Double:
@@ -76,6 +81,68 @@ func `==`*(a, b: Cell): bool =
       a.setVal == b.setVal
   else:
     false
+
+func `<`*(a, b: Cell): bool =
+  if a.kind == b.kind:
+    case a.kind:
+    of Long:
+      a.longVal < b.longVal
+    of Double:
+      a.doubleVal < b.doubleVal
+    else:
+      false
+  else:
+    let
+      f1 =
+        case a.kind:
+        of Long:
+          a.longVal.float64
+        of Double:
+          a.doubleVal
+        else:
+          return false
+      f2 =
+        case b.kind:
+        of Long:
+          b.longVal.float64
+        of Double:
+          b.doubleVal
+        else:
+          return false
+    f1 < f2
+
+func `<=`*(a, b: Cell): bool =
+  a < b or a == b
+
+func eq*(args: seq[Cell]): Cell =
+  for i in 0 ..< args.len - 1:
+    if args[i] != args[i+1]:
+      return Cell(kind: Boolean, booleanVal: false)
+  Cell(kind: Boolean, booleanVal: true)
+
+func ge*(args: seq[Cell]): Cell =
+  for i in 0 ..< args.len - 1:
+    if args[i] < args[i+1]:
+      return Cell(kind: Boolean, booleanVal: false)
+  Cell(kind: Boolean, booleanVal: true)
+
+func gt*(args: seq[Cell]): Cell =
+  for i in 0 ..< args.len - 1:
+    if args[i] <= args[i+1]:
+      return Cell(kind: Boolean, booleanVal: false)
+  Cell(kind: Boolean, booleanVal: true)
+
+func le*(args: seq[Cell]): Cell =
+  for i in 0 ..< args.len - 1:
+    if args[i] > args[i+1]:
+      return Cell(kind: Boolean, booleanVal: false)
+  Cell(kind: Boolean, booleanVal: true)
+
+func lt*(args: seq[Cell]): Cell =
+  for i in 0 ..< args.len - 1:
+    if args[i] >= args[i+1]:
+      return Cell(kind: Boolean, booleanVal: false)
+  Cell(kind: Boolean, booleanVal: true)
 
 func isAllLongs(args: seq[Cell]): bool =
   for arg in args:
@@ -171,6 +238,11 @@ func divide*(args: seq[Cell]): Cell =
   Cell(kind: Double, doubleVal: res)
 
 func initContext*(): Context =
+  result.vars["="] = Cell(kind: Fn, fnVal: eq)
+  result.vars[">"] = Cell(kind: Fn, fnVal: gt)
+  result.vars[">="] = Cell(kind: Fn, fnVal: ge)
+  result.vars["<"] = Cell(kind: Fn, fnVal: lt)
+  result.vars["<="] = Cell(kind: Fn, fnVal: le)
   result.vars["+"] = Cell(kind: Fn, fnVal: plus)
   result.vars["-"] = Cell(kind: Fn, fnVal: minus)
   result.vars["*"] = Cell(kind: Fn, fnVal: times)

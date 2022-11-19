@@ -6,6 +6,30 @@ test "numbers":
   check eval.eval(read.read("42")[0]) == eval.Cell(kind: Long, longVal: 42)
   check eval.eval(read.read("42.0")[0]) == eval.Cell(kind: Double, doubleVal: 42.0)
 
+test "=":
+  check eval.eval(read.read("(= 1 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(= 1 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+
+test ">":
+  check eval.eval(read.read("(> 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+  check eval.eval(read.read("(> 2 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(> 1.5 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+
+test ">=":
+  check eval.eval(read.read("(>= 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(>= 2 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(>= 1.5 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+
+test "<":
+  check eval.eval(read.read("(< 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+  check eval.eval(read.read("(< 1 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(< 2 1.5)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+
+test "<=":
+  check eval.eval(read.read("(<= 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(<= 1 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(<= 2 1.5)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+
 test "+":
   check eval.eval(read.read("(+ 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 6)
   check eval.eval(read.read("(+ 1 1.0)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
