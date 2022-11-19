@@ -62,7 +62,7 @@ test "/":
   check eval.eval(read.read("(/ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
 
 test "pow":
-  check eval.eval(read.read("(pow 2 3)")[0]) == eval.Cell(kind: Long, longVal: 8)
+  check eval.eval(read.read("(pow 2 3)")[0]) == eval.Cell(kind: Double, doubleVal: 8.0)
   check eval.eval(read.read("(pow 2.5 2)")[0]) == eval.Cell(kind: Double, doubleVal: 6.25)
 
 test "exp":
