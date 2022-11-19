@@ -85,12 +85,12 @@ func isAllLongs(args: seq[Cell]): bool =
 
 func plus*(args: seq[Cell]): Cell =
   if isAllLongs(args):
-    var res: int64
+    var res: int64 = 0
     for arg in args:
       res += arg.longVal
     Cell(kind: Long, longVal: res)
   else:
-    var res: float64
+    var res: float64 = 0.0
     for arg in args:
       case arg.kind:
       of Long:
@@ -103,7 +103,7 @@ func plus*(args: seq[Cell]): Cell =
 
 func minus*(args: seq[Cell]): Cell =
   if isAllLongs(args):
-    var res: int64
+    var res: int64 = 0
     var i = 0
     for arg in args:
       if i == 0:
@@ -113,7 +113,7 @@ func minus*(args: seq[Cell]): Cell =
       i += 1
     Cell(kind: Long, longVal: res)
   else:
-    var res: float64
+    var res: float64 = 0.0
     var i = 0
     for arg in args:
       case arg.kind:
@@ -132,9 +132,49 @@ func minus*(args: seq[Cell]): Cell =
       i += 1
     Cell(kind: Double, doubleVal: res)
 
+func times*(args: seq[Cell]): Cell =
+  if isAllLongs(args):
+    var res: int64 = 1
+    for arg in args:
+      res *= arg.longVal
+    Cell(kind: Long, longVal: res)
+  else:
+    var res: float64 = 1.0
+    for arg in args:
+      case arg.kind:
+      of Long:
+        res *= arg.longVal.float64
+      of Double:
+        res *= arg.doubleVal
+      else:
+        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+    Cell(kind: Double, doubleVal: res)
+
+func divide*(args: seq[Cell]): Cell =
+  var res: float64 = 1.0
+  var i = 0
+  for arg in args:
+    case arg.kind:
+    of Long:
+      if i == 0:
+        res = arg.longVal.float64
+      else:
+        res /= arg.longVal.float64
+    of Double:
+      if i == 0:
+        res = arg.doubleVal
+      else:
+        res /= arg.doubleVal
+    else:
+      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+    i += 1
+  Cell(kind: Double, doubleVal: res)
+
 func initContext*(): Context =
   result.vars["+"] = Cell(kind: Fn, fnVal: plus)
   result.vars["-"] = Cell(kind: Fn, fnVal: minus)
+  result.vars["*"] = Cell(kind: Fn, fnVal: times)
+  result.vars["/"] = Cell(kind: Fn, fnVal: divide)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

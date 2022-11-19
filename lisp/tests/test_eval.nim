@@ -15,3 +15,13 @@ test "-":
   check eval.eval(read.read("(- 3 2)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(- 3 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 1.0)
   check eval.eval(read.read("(- 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "*":
+  check eval.eval(read.read("(* 3 2)")[0]) == eval.Cell(kind: Long, longVal: 6)
+  check eval.eval(read.read("(* 3 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 6.0)
+  check eval.eval(read.read("(* 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "/":
+  check eval.eval(read.read("(/ 4 2)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
+  check eval.eval(read.read("(/ 1 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 0.5)
+  check eval.eval(read.read("(/ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
