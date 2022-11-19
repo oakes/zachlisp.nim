@@ -30,6 +30,16 @@ test "<=":
   check eval.eval(read.read("(<= 1 2)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
   check eval.eval(read.read("(<= 2 1.5)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
 
+test "min":
+  check eval.eval(read.read("(min 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(min 1.5 7 1)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(min 1.5 7 2)")[0]) == eval.Cell(kind: Double, doubleVal: 1.5)
+
+test "max":
+  check eval.eval(read.read("(max 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 3)
+  check eval.eval(read.read("(max 1.5 7 1)")[0]) == eval.Cell(kind: Long, longVal: 7)
+  check eval.eval(read.read("(max 1 2 2.5)")[0]) == eval.Cell(kind: Double, doubleVal: 2.5)
+
 test "+":
   check eval.eval(read.read("(+ 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 6)
   check eval.eval(read.read("(+ 1 1.0)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)

@@ -144,6 +144,20 @@ func lt*(args: seq[Cell]): Cell =
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
+func min*(args: seq[Cell]): Cell =
+  var res = args[0]
+  for arg in args[1 ..< args.len]:
+    if arg < res:
+      res = arg
+  res
+
+func max*(args: seq[Cell]): Cell =
+  var res = args[0]
+  for arg in args[1 ..< args.len]:
+    if arg > res:
+      res = arg
+  res
+
 func isAllLongs(args: seq[Cell]): bool =
   for arg in args:
     if arg.kind != Long:
@@ -243,6 +257,8 @@ func initContext*(): Context =
   result.vars[">="] = Cell(kind: Fn, fnVal: ge)
   result.vars["<"] = Cell(kind: Fn, fnVal: lt)
   result.vars["<="] = Cell(kind: Fn, fnVal: le)
+  result.vars["min"] = Cell(kind: Fn, fnVal: min)
+  result.vars["max"] = Cell(kind: Fn, fnVal: max)
   result.vars["+"] = Cell(kind: Fn, fnVal: plus)
   result.vars["-"] = Cell(kind: Fn, fnVal: minus)
   result.vars["*"] = Cell(kind: Fn, fnVal: times)
