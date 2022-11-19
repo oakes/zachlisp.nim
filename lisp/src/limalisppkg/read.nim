@@ -2,6 +2,7 @@ import unicode, tables, sets
 
 type
   CellKind* = enum
+    Empty,
     Collection,
     SpecialPair,
     Whitespace,

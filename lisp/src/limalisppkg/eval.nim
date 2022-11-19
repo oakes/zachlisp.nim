@@ -115,6 +115,22 @@ func `<`*(a, b: Cell): bool =
 func `<=`*(a, b: Cell): bool =
   a < b or a == b
 
+func isAllLongs(args: seq[Cell]): bool =
+  for arg in args:
+    if arg.kind != Long:
+      return false
+  true
+
+template checkKind(cell: Cell, kinds: set[CellKind]) =
+  if cell.kind notin kinds:
+    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
+template checkKind(cells: seq[Cell], kinds: set[CellKind]) =
+  for cell in cells:
+    checkKind(cell, kinds)
+
+# public functions
+
 func eq*(args: seq[Cell]): Cell =
   for i in 0 ..< args.len - 1:
     if args[i] != args[i+1]:
@@ -122,30 +138,35 @@ func eq*(args: seq[Cell]): Cell =
   Cell(kind: Boolean, booleanVal: true)
 
 func ge*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] < args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func gt*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] <= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func le*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] > args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func lt*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] >= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func min*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
     if arg < res:
@@ -153,19 +174,15 @@ func min*(args: seq[Cell]): Cell =
   res
 
 func max*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
     if arg > res:
       res = arg
   res
 
-func isAllLongs(args: seq[Cell]): bool =
-  for arg in args:
-    if arg.kind != Long:
-      return false
-  true
-
 func plus*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 0
     for arg in args:
@@ -184,6 +201,7 @@ func plus*(args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func minus*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 0
     var i = 0
@@ -215,6 +233,7 @@ func minus*(args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func times*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 1
     for arg in args:
@@ -233,6 +252,7 @@ func times*(args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func divide*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   var res: float64 = 1.0
   var i = 0
   for arg in args:
@@ -253,6 +273,7 @@ func divide*(args: seq[Cell]): Cell =
   Cell(kind: Double, doubleVal: res)
 
 func pow*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   let
     a1 = args[0]
     a2 = args[1]
@@ -275,6 +296,7 @@ func pow*(args: seq[Cell]): Cell =
   Cell(kind: Double, doubleVal: math.pow(f1, f2))
 
 func exp*(args: seq[Cell]): Cell =
+  checkKind(args, {Long, Double})
   let
     a1 = args[0]
     f1 =
@@ -326,7 +348,9 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
           cells.add(res)
       if cells.len > 0:
         var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
-        res.readCell = cell
+        # set the readCell if it hasn't been set already
+        if res.readCell.kind == read.Empty:
+          res.readCell = cell
         res
       else:
         Cell(kind: Error, error: EmptyFnInvocation, readCell: cell)
