@@ -329,7 +329,9 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
         else:
           cells.add(res)
       if cells.len > 0:
-        return invoke(ctx, cells[0], cells[1 ..< cells.len])
+        var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
+        res.readCell = cell
+        res
       else:
         Cell(kind: Error, error: EmptyFnInvocation, readCell: cell)
     else:
