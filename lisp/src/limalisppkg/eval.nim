@@ -1,6 +1,7 @@
 from ./read import nil
 import tables, sets
 from parseutils import nil
+from math import nil
 
 type
   CellKind* = enum
@@ -251,6 +252,45 @@ func divide*(args: seq[Cell]): Cell =
     i += 1
   Cell(kind: Double, doubleVal: res)
 
+func pow*(args: seq[Cell]): Cell =
+  let
+    a1 = args[0]
+    a2 = args[1]
+  if {a1.kind, a2.kind} == {Long} and a1.longVal >= 0 and a2.longVal >= 0:
+    Cell(kind: Long, longVal: math.`^`(a1.longVal.Natural, a2.longVal.Natural))
+  else:
+    let
+      f1 =
+        case a1.kind:
+        of Long:
+          a1.longVal.float64
+        of Double:
+          a1.doubleVal
+        else:
+          return Cell(kind: Error, error: InvalidType, readCell: a1.readCell)
+      f2 =
+        case a2.kind:
+        of Long:
+          a2.longVal.float64
+        of Double:
+          a2.doubleVal
+        else:
+          return Cell(kind: Error, error: InvalidType, readCell: a2.readCell)
+    Cell(kind: Double, doubleVal: math.pow(f1, f2))
+
+func exp*(args: seq[Cell]): Cell =
+  let
+    a1 = args[0]
+    f1 =
+      case a1.kind:
+      of Long:
+        a1.longVal.float64
+      of Double:
+        a1.doubleVal
+      else:
+        return Cell(kind: Error, error: InvalidType, readCell: a1.readCell)
+  Cell(kind: Double, doubleVal: math.exp(f1))
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -263,6 +303,8 @@ func initContext*(): Context =
   result.vars["-"] = Cell(kind: Fn, fnVal: minus)
   result.vars["*"] = Cell(kind: Fn, fnVal: times)
   result.vars["/"] = Cell(kind: Fn, fnVal: divide)
+  result.vars["pow"] = Cell(kind: Fn, fnVal: pow)
+  result.vars["exp"] = Cell(kind: Fn, fnVal: exp)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

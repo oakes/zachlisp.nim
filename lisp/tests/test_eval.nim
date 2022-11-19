@@ -1,6 +1,7 @@
 import unittest
 from limalisppkg/read import CellKind, ErrorKind, Cell, `==`
 from limalisppkg/eval import CellKind, ErrorKind, Cell, `==`
+from math import nil
 
 test "numbers":
   check eval.eval(read.read("42")[0]) == eval.Cell(kind: Long, longVal: 42)
@@ -59,3 +60,11 @@ test "/":
   check eval.eval(read.read("(/ 4 2)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
   check eval.eval(read.read("(/ 1 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 0.5)
   check eval.eval(read.read("(/ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "pow":
+  check eval.eval(read.read("(pow 2 3)")[0]) == eval.Cell(kind: Long, longVal: 8)
+  check eval.eval(read.read("(pow 2.5 2)")[0]) == eval.Cell(kind: Double, doubleVal: 6.25)
+
+test "exp":
+  check eval.eval(read.read("(exp 1)")[0]) == eval.Cell(kind: Double, doubleVal: math.E)
+
