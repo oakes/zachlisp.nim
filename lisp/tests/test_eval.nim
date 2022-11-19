@@ -40,40 +40,51 @@ test "min":
   check eval.eval(read.read("(min 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(min 1.5 7 1)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(min 1.5 7 2)")[0]) == eval.Cell(kind: Double, doubleVal: 1.5)
+  check eval.eval(read.read("(min 1)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(min 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(min)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "max":
   check eval.eval(read.read("(max 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 3)
   check eval.eval(read.read("(max 1.5 7 1)")[0]) == eval.Cell(kind: Long, longVal: 7)
   check eval.eval(read.read("(max 1 2 2.5)")[0]) == eval.Cell(kind: Double, doubleVal: 2.5)
+  check eval.eval(read.read("(max 1)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(max 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(max)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "+":
   check eval.eval(read.read("(+ 1 2 3)")[0]) == eval.Cell(kind: Long, longVal: 6)
   check eval.eval(read.read("(+ 1 1.0)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
   check eval.eval(read.read("(+ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(+)")[0]) == eval.Cell(kind: Long, longVal: 0)
 
 test "-":
   check eval.eval(read.read("(- 3 2)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(- 3 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 1.0)
   check eval.eval(read.read("(- 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(-)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "*":
   check eval.eval(read.read("(* 3 2)")[0]) == eval.Cell(kind: Long, longVal: 6)
   check eval.eval(read.read("(* 3 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 6.0)
   check eval.eval(read.read("(* 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(*)")[0]) == eval.Cell(kind: Long, longVal: 1)
 
 test "/":
   check eval.eval(read.read("(/ 4 2)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
   check eval.eval(read.read("(/ 1 2.0)")[0]) == eval.Cell(kind: Double, doubleVal: 0.5)
   check eval.eval(read.read("(/ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(/)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "pow":
   check eval.eval(read.read("(pow 2 3)")[0]) == eval.Cell(kind: Double, doubleVal: 8.0)
   check eval.eval(read.read("(pow 2.5 2)")[0]) == eval.Cell(kind: Double, doubleVal: 6.25)
   check eval.eval(read.read("(pow 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(pow)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+  check eval.eval(read.read("(pow 1)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "exp":
   check eval.eval(read.read("(exp 1)")[0]) == eval.Cell(kind: Double, doubleVal: math.E)
   check eval.eval(read.read("(exp \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(exp)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 

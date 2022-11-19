@@ -23,6 +23,7 @@ type
     NumberParseError,
     NotAFunction,
     InvalidType,
+    InvalidNumberOfArguments,
   Cell* = object
     case kind*: CellKind
     of Error:
@@ -129,6 +130,10 @@ template checkKind(cells: seq[Cell], kinds: set[CellKind]) =
   for cell in cells:
     checkKind(cell, kinds)
 
+template checkCount(count: int, min: int) =
+  if count < min:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)
+
 # public functions
 
 func eq*(args: seq[Cell]): Cell =
@@ -166,6 +171,7 @@ func lt*(args: seq[Cell]): Cell =
   Cell(kind: Boolean, booleanVal: true)
 
 func min*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
@@ -174,6 +180,7 @@ func min*(args: seq[Cell]): Cell =
   res
 
 func max*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
@@ -201,6 +208,7 @@ func plus*(args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func minus*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 0
@@ -252,6 +260,7 @@ func times*(args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func divide*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   var res: float64 = 1.0
   var i = 0
@@ -273,6 +282,7 @@ func divide*(args: seq[Cell]): Cell =
   Cell(kind: Double, doubleVal: res)
 
 func pow*(args: seq[Cell]): Cell =
+  checkCount(args.len, 2)
   checkKind(args, {Long, Double})
   let
     a1 = args[0]
@@ -296,6 +306,7 @@ func pow*(args: seq[Cell]): Cell =
   Cell(kind: Double, doubleVal: math.pow(f1, f2))
 
 func exp*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
   checkKind(args, {Long, Double})
   let
     a1 = args[0]
