@@ -6,6 +6,7 @@ type
   CellKind* = enum
     Error,
     Long,
+    Double,
     String,
     Fn,
     List,
@@ -26,6 +27,8 @@ type
       error*: ErrorKind
     of Long:
       longVal*: int64
+    of Double:
+      doubleVal*: float64
     of String:
       stringVal: string
     of Fn:
@@ -57,6 +60,8 @@ func `==`*(a, b: Cell): bool =
       a.error == b.error
     of Long:
       a.longVal == b.longVal
+    of Double:
+      a.doubleVal == b.doubleVal
     of String:
       a.stringVal == b.stringVal
     of Fn:
@@ -72,30 +77,60 @@ func `==`*(a, b: Cell): bool =
   else:
     false
 
-func plus*(args: seq[Cell]): Cell =
-  var res: int64
+func isAllLongs(args: seq[Cell]): bool =
   for arg in args:
-    case arg.kind:
-    of Long:
+    if arg.kind != Long:
+      return false
+  true
+
+func plus*(args: seq[Cell]): Cell =
+  if isAllLongs(args):
+    var res: int64
+    for arg in args:
       res += arg.longVal
-    else:
-      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
-  Cell(kind: Long, longVal: res)
+    Cell(kind: Long, longVal: res)
+  else:
+    var res: float64
+    for arg in args:
+      case arg.kind:
+      of Long:
+        res += arg.longVal.float64
+      of Double:
+        res += arg.doubleVal
+      else:
+        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+    Cell(kind: Double, doubleVal: res)
 
 func minus*(args: seq[Cell]): Cell =
-  var res: int64
-  var i = 0
-  for arg in args:
-    case arg.kind:
-    of Long:
+  if isAllLongs(args):
+    var res: int64
+    var i = 0
+    for arg in args:
       if i == 0:
         res = arg.longVal
       else:
         res -= arg.longVal
-    else:
-      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
-    i += 1
-  Cell(kind: Long, longVal: res)
+      i += 1
+    Cell(kind: Long, longVal: res)
+  else:
+    var res: float64
+    var i = 0
+    for arg in args:
+      case arg.kind:
+      of Long:
+        if i == 0:
+          res = arg.longVal.float64
+        else:
+          res -= arg.longVal.float64
+      of Double:
+        if i == 0:
+          res = arg.doubleVal
+        else:
+          res -= arg.doubleVal
+      else:
+        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+      i += 1
+    Cell(kind: Double, doubleVal: res)
 
 func initContext*(): Context =
   result.vars["+"] = Cell(kind: Fn, fnVal: plus)
@@ -137,12 +172,26 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
     else:
       Cell(kind: Error, error: VarDoesNotExist, readCell: cell)
   of read.Number:
-    var res: int
-    try:
-      parseutils.parseInt(cell.token, res)
-    except ValueError:
-      return Cell(kind: Error, error: NumberParseError, readCell: cell)
-    Cell(kind: Long, longVal: res.int64, readCell: cell)
+    var periodCount = 0
+    for ch in cell.token:
+      if ch == '.':
+        periodCount += 1
+    if periodCount == 0:
+      var res: int
+      try:
+        parseutils.parseInt(cell.token, res)
+      except ValueError:
+        return Cell(kind: Error, error: NumberParseError, readCell: cell)
+      Cell(kind: Long, longVal: res.int64, readCell: cell)
+    elif periodCount == 1:
+      var res: float
+      try:
+        parseutils.parseFloat(cell.token, res)
+      except ValueError:
+        return Cell(kind: Error, error: NumberParseError, readCell: cell)
+      Cell(kind: Double, doubleVal: res.float64, readCell: cell)
+    else:
+      Cell(kind: Error, error: NumberParseError, readCell: cell)
   of read.String:
     Cell(kind: String, stringVal: cell.stringValue, readCell: cell)
   else:
