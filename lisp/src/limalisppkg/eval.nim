@@ -122,6 +122,15 @@ func isAllLongs(args: seq[Cell]): bool =
       return false
   true
 
+template toDouble(cell: Cell) =
+  case cell.kind:
+  of Long:
+    cell.longVal.float64
+  of Double:
+    cell.doubleVal
+  else:
+    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 template checkKind(cell: Cell, kinds: set[CellKind]) =
   if cell.kind notin kinds:
     return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
@@ -132,6 +141,11 @@ template checkKind(cells: seq[Cell], kinds: set[CellKind]) =
 
 template checkCount(count: int, min: int) =
   if count < min:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)
+
+template checkCount(count: int, min: int, max: int) =
+  checkCount(count, min)
+  if count > max:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
 
 # public functions
@@ -198,13 +212,7 @@ func plus*(args: seq[Cell]): Cell =
   else:
     var res: float64 = 0.0
     for arg in args:
-      case arg.kind:
-      of Long:
-        res += arg.longVal.float64
-      of Double:
-        res += arg.doubleVal
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+      res += arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
 func minus*(args: seq[Cell]): Cell =
@@ -224,19 +232,10 @@ func minus*(args: seq[Cell]): Cell =
     var res: float64 = 0.0
     var i = 0
     for arg in args:
-      case arg.kind:
-      of Long:
-        if i == 0:
-          res = arg.longVal.float64
-        else:
-          res -= arg.longVal.float64
-      of Double:
-        if i == 0:
-          res = arg.doubleVal
-        else:
-          res -= arg.doubleVal
+      if i == 0:
+        res = arg.toDouble
       else:
-        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+        res -= arg.toDouble
       i += 1
     Cell(kind: Double, doubleVal: res)
 
@@ -250,13 +249,7 @@ func times*(args: seq[Cell]): Cell =
   else:
     var res: float64 = 1.0
     for arg in args:
-      case arg.kind:
-      of Long:
-        res *= arg.longVal.float64
-      of Double:
-        res *= arg.doubleVal
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+      res *= arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
 func divide*(args: seq[Cell]): Cell =
@@ -265,60 +258,32 @@ func divide*(args: seq[Cell]): Cell =
   var res: float64 = 1.0
   var i = 0
   for arg in args:
-    case arg.kind:
-    of Long:
-      if i == 0:
-        res = arg.longVal.float64
-      else:
-        res /= arg.longVal.float64
-    of Double:
-      if i == 0:
-        res = arg.doubleVal
-      else:
-        res /= arg.doubleVal
+    if i == 0:
+      res = arg.toDouble
     else:
-      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+      res /= arg.toDouble
     i += 1
   Cell(kind: Double, doubleVal: res)
 
 func pow*(args: seq[Cell]): Cell =
-  checkCount(args.len, 2)
+  checkCount(args.len, 2, 2)
   checkKind(args, {Long, Double})
-  let
-    a1 = args[0]
-    a2 = args[1]
-    f1 =
-      case a1.kind:
-      of Long:
-        a1.longVal.float64
-      of Double:
-        a1.doubleVal
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: a1.readCell)
-    f2 =
-      case a2.kind:
-      of Long:
-        a2.longVal.float64
-      of Double:
-        a2.doubleVal
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: a2.readCell)
-  Cell(kind: Double, doubleVal: math.pow(f1, f2))
+  Cell(kind: Double, doubleVal: math.pow(args[0].toDouble, args[1].toDouble))
 
 func exp*(args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
+  checkCount(args.len, 1, 1)
   checkKind(args, {Long, Double})
-  let
-    a1 = args[0]
-    f1 =
-      case a1.kind:
-      of Long:
-        a1.longVal.float64
-      of Double:
-        a1.doubleVal
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: a1.readCell)
-  Cell(kind: Double, doubleVal: math.exp(f1))
+  Cell(kind: Double, doubleVal: math.exp(args[0].toDouble))
+
+func floor*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long, Double})
+  Cell(kind: Double, doubleVal: math.floor(args[0].toDouble))
+
+func ceil*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long, Double})
+  Cell(kind: Double, doubleVal: math.ceil(args[0].toDouble))
 
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
@@ -334,6 +299,8 @@ func initContext*(): Context =
   result.vars["/"] = Cell(kind: Fn, fnVal: divide)
   result.vars["pow"] = Cell(kind: Fn, fnVal: pow)
   result.vars["exp"] = Cell(kind: Fn, fnVal: exp)
+  result.vars["floor"] = Cell(kind: Fn, fnVal: floor)
+  result.vars["ceil"] = Cell(kind: Fn, fnVal: ceil)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

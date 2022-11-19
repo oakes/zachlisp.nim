@@ -88,3 +88,11 @@ test "exp":
   check eval.eval(read.read("(exp \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(exp)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
+test "floor":
+  check eval.eval(read.read("(floor 1.5)")[0]) == eval.Cell(kind: Double, doubleVal: 1.0)
+  check eval.eval(read.read("(floor)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
+test "ceil":
+  check eval.eval(read.read("(ceil 1.5)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
+  check eval.eval(read.read("(ceil)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
