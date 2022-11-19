@@ -82,8 +82,24 @@ func plus*(args: seq[Cell]): Cell =
       return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
   Cell(kind: Long, longVal: res)
 
+func minus*(args: seq[Cell]): Cell =
+  var res: int64
+  var i = 0
+  for arg in args:
+    case arg.kind:
+    of Long:
+      if i == 0:
+        res = arg.longVal
+      else:
+        res -= arg.longVal
+    else:
+      return Cell(kind: Error, error: InvalidType, readCell: arg.readCell)
+    i += 1
+  Cell(kind: Long, longVal: res)
+
 func initContext*(): Context =
   result.vars["+"] = Cell(kind: Fn, fnVal: plus)
+  result.vars["-"] = Cell(kind: Fn, fnVal: minus)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
