@@ -293,6 +293,16 @@ func signum*(args: seq[Cell]): Cell =
   else:
     Cell(kind: Long, longVal: math.sgn(arg.toDouble))
 
+func inc*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long})
+  Cell(kind: Long, longVal: args[0].longVal + 1)
+
+func dec*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long})
+  Cell(kind: Long, longVal: args[0].longVal - 1)
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -312,6 +322,8 @@ func initContext*(): Context =
   result.vars["sqrt"] = Cell(kind: Fn, fnVal: sqrt)
   result.vars["abs"] = Cell(kind: Fn, fnVal: abs)
   result.vars["signum"] = Cell(kind: Fn, fnVal: signum)
+  result.vars["inc"] = Cell(kind: Fn, fnVal: inc)
+  result.vars["dec"] = Cell(kind: Fn, fnVal: dec)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
