@@ -370,19 +370,19 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
       if ch == '.':
         periodCount += 1
     if periodCount == 0:
-      var res: int
+      var n: int
       try:
-        parseutils.parseInt(cell.token, res)
+        parseutils.parseInt(cell.token, n)
       except ValueError:
         return Cell(kind: Error, error: NumberParseError, readCell: cell)
-      Cell(kind: Long, longVal: res.int64, readCell: cell)
+      Cell(kind: Long, longVal: n.int64, readCell: cell)
     elif periodCount == 1:
-      var res: float
+      var n: float
       try:
-        parseutils.parseFloat(cell.token, res)
+        parseutils.parseFloat(cell.token, n)
       except ValueError:
         return Cell(kind: Error, error: NumberParseError, readCell: cell)
-      Cell(kind: Double, doubleVal: res.float64, readCell: cell)
+      Cell(kind: Double, doubleVal: n.float64, readCell: cell)
     else:
       Cell(kind: Error, error: NumberParseError, readCell: cell)
   of read.String:
