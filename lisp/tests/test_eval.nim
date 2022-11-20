@@ -111,3 +111,9 @@ test "abs":
   check eval.eval(read.read("(abs \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(abs)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
+test "signum":
+  check eval.eval(read.read("(signum -4)")[0]) == eval.Cell(kind: Long, longVal: -1)
+  check eval.eval(read.read("(signum 4.2)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(signum \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(signum)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
