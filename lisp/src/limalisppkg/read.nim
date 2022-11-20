@@ -159,7 +159,10 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
         continue
       of digits:
-        save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
+        if temp.token == "-":
+          temp = Cell(kind: Number, token: temp.token & str, position: temp.position)
+        else:
+          save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
         continue
       of whitespace:
         save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace})

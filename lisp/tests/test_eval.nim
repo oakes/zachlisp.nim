@@ -6,6 +6,8 @@ from math import nil
 test "numbers":
   check eval.eval(read.read("42")[0]) == eval.Cell(kind: Long, longVal: 42)
   check eval.eval(read.read("42.0")[0]) == eval.Cell(kind: Double, doubleVal: 42.0)
+  check eval.eval(read.read("-42")[0]) == eval.Cell(kind: Long, longVal: -42)
+  check eval.eval(read.read("-42.0")[0]) == eval.Cell(kind: Double, doubleVal: -42.0)
 
 test "=":
   check eval.eval(read.read("(= 1 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
@@ -90,9 +92,22 @@ test "exp":
 
 test "floor":
   check eval.eval(read.read("(floor 1.5)")[0]) == eval.Cell(kind: Double, doubleVal: 1.0)
+  check eval.eval(read.read("(floor \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(floor)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
 test "ceil":
   check eval.eval(read.read("(ceil 1.5)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
+  check eval.eval(read.read("(ceil \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(ceil)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
+test "sqrt":
+  check eval.eval(read.read("(sqrt 4)")[0]) == eval.Cell(kind: Double, doubleVal: 2.0)
+  check eval.eval(read.read("(sqrt \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(sqrt)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
+test "abs":
+  check eval.eval(read.read("(abs -4)")[0]) == eval.Cell(kind: Long, longVal: 4)
+  check eval.eval(read.read("(abs -4.2)")[0]) == eval.Cell(kind: Double, doubleVal: 4.2)
+  check eval.eval(read.read("(abs \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(abs)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 

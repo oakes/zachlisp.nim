@@ -270,6 +270,20 @@ func ceil*(args: seq[Cell]): Cell =
   checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.ceil(args[0].toDouble))
 
+func sqrt*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long, Double})
+  Cell(kind: Double, doubleVal: math.sqrt(args[0].toDouble))
+
+func abs*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {Long, Double})
+  let arg = args[0]
+  if arg.kind == Long:
+    Cell(kind: Long, longVal: abs(arg.longVal))
+  else:
+    Cell(kind: Double, doubleVal: abs(arg.toDouble))
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -286,6 +300,8 @@ func initContext*(): Context =
   result.vars["exp"] = Cell(kind: Fn, fnVal: exp)
   result.vars["floor"] = Cell(kind: Fn, fnVal: floor)
   result.vars["ceil"] = Cell(kind: Fn, fnVal: ceil)
+  result.vars["sqrt"] = Cell(kind: Fn, fnVal: sqrt)
+  result.vars["abs"] = Cell(kind: Fn, fnVal: abs)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
