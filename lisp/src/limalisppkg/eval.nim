@@ -1,5 +1,5 @@
 from ./read import nil
-import tables, sets
+import tables, sets, hashes
 from parseutils import nil
 from math import nil
 
@@ -10,6 +10,7 @@ type
     Long,
     Double,
     String,
+    Keyword,
     Fn,
     List,
     Vector,
@@ -24,6 +25,7 @@ type
     NotAFunction,
     InvalidType,
     InvalidNumberOfArguments,
+    MustHaveEvenNumberOfForms,
   Cell* = object
     case kind*: CellKind
     of Error:
@@ -36,6 +38,8 @@ type
       doubleVal*: float64
     of String:
       stringVal*: string
+    of Keyword:
+      keywordVal*: string
     of Fn:
       fnVal*: proc (cells: seq[Cell]): Cell {.noSideEffect.}
     of List:
@@ -58,6 +62,31 @@ const
     "#{": Set,
   }.toTable
 
+func hash*(a: Cell): Hash =
+  case a.kind:
+  of Error:
+    a.error.hash
+  of Boolean:
+    a.booleanVal.hash
+  of Long:
+    a.longVal.hash
+  of Double:
+    a.doubleVal.hash
+  of String:
+    a.stringVal.hash
+  of Keyword:
+    a.keywordVal.hash
+  of Fn:
+    a.fnVal.hash
+  of List:
+    a.listVal.hash
+  of Vector:
+    a.vectorVal.hash
+  of Map:
+    a.mapVal.hash
+  of Set:
+    a.setVal.hash
+
 func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:
     case a.kind:
@@ -71,6 +100,8 @@ func `==`*(a, b: Cell): bool =
       a.doubleVal == b.doubleVal
     of String:
       a.stringVal == b.stringVal
+    of Keyword:
+      a.keywordVal == b.keywordVal
     of Fn:
       a.fnVal == b.fnVal
     of List:
@@ -147,6 +178,16 @@ template checkCount(count: int, min: int, max: int) =
   checkCount(count, min)
   if count > max:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
+
+template evalCells(ctx: Context, readCells: seq[read.Cell]): seq[Cell] =
+  var cells: seq[Cell]
+  for cell in readCells:
+    let res = eval(ctx, cell)
+    if res.kind == Error:
+      return res
+    else:
+      cells.add(res)
+  cells
 
 # public functions
 
@@ -340,13 +381,7 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
     let typ = delimToType[delim]
     case typ:
     of List:
-      var cells: seq[Cell]
-      for cell in cell.contents:
-        let res = eval(ctx, cell)
-        if res.kind == Error:
-          return res
-        else:
-          cells.add(res)
+      let cells = evalCells(ctx, cell.contents)
       if cells.len > 0:
         var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
         # set the readCell if it hasn't been set already
@@ -355,6 +390,21 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
         res
       else:
         Cell(kind: Error, error: EmptyFnInvocation, readCell: cell)
+    of Vector:
+      Cell(kind: Vector, vectorVal: evalCells(ctx, cell.contents))
+    of Map:
+      if cell.contents.len mod 2 != 0:
+        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, readCell: cell)
+      let cells = evalCells(ctx, cell.contents)
+      var t: Table[Cell, Cell]
+      for i in 0 ..< int(cells.len / 2):
+        t[cells[i*2]] = cells[i*2+1]
+      Cell(kind: Map, mapVal: t)
+    of Set:
+      var hs: HashSet[Cell]
+      for cell in evalCells(ctx, cell.contents):
+        hs.incl(cell)
+      Cell(kind: Set, setVal: hs)
     else:
       Cell(kind: Error, error: NotImplemented, readCell: cell)
   of read.Symbol:
@@ -387,6 +437,8 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
       Cell(kind: Error, error: NumberParseError, readCell: cell)
   of read.String:
     Cell(kind: String, stringVal: cell.stringValue, readCell: cell)
+  of read.Keyword:
+    Cell(kind: Keyword, keywordVal: cell.token, readCell: cell)
   else:
     Cell(kind: Error, error: NotImplemented, readCell: cell)
 

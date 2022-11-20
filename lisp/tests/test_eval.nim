@@ -1,7 +1,8 @@
 import unittest
-from limalisppkg/read import CellKind, ErrorKind, Cell, `==`
+from limalisppkg/read import `==`
 from limalisppkg/eval import CellKind, ErrorKind, Cell, `==`
 from math import nil
+import tables, sets
 
 test "numbers":
   check eval.eval(read.read("42")[0]) == eval.Cell(kind: Long, longVal: 42)
@@ -128,4 +129,29 @@ test "dec":
   check eval.eval(read.read("(dec 1.5)")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(dec \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(dec)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
+test "vectors":
+  check eval.eval(read.read("[1 \"hi\" :wassup]")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+  ])
+  check eval.eval(read.read("[foo-bar]")[0]) == eval.Cell(kind: Error, error: VarDoesNotExist)
+
+test "maps":
+  check eval.eval(read.read("{:foo 1 :bar \"hi\"}")[0]) == eval.Cell(kind: Map, mapVal: {
+      eval.Cell(kind: Keyword, keywordVal: ":foo"): eval.Cell(kind: Long, longVal: 1),
+      eval.Cell(kind: Keyword, keywordVal: ":bar"): eval.Cell(kind: String, stringVal: "hi"),
+    }.toTable
+  )
+  check eval.eval(read.read("{:foo foo-bar}")[0]) == eval.Cell(kind: Error, error: VarDoesNotExist)
+
+test "sets":
+  check eval.eval(read.read("#{:foo 1 :bar 1}")[0]) == eval.Cell(kind: Set, setVal: [
+      eval.Cell(kind: Keyword, keywordVal: ":foo"),
+      eval.Cell(kind: Long, longVal: 1),
+      eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    ].toHashSet
+  )
+  check eval.eval(read.read("#{:foo foo-bar}")[0]) == eval.Cell(kind: Error, error: VarDoesNotExist)
 
