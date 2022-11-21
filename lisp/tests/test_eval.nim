@@ -155,3 +155,25 @@ test "sets":
   )
   check eval.eval(read.read("#{:foo foo-bar}")[0]) == eval.Cell(kind: Error, error: VarDoesNotExist)
 
+test "vec":
+  check eval.eval(read.read("(vec [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+  ])
+  check eval.eval(read.read("(vec {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Vector, vectorVal: @[
+        eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
+      ]),
+      eval.Cell(kind: Vector, vectorVal: @[
+        eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+      ]),
+    ]
+  )
+  check eval.eval(read.read("(vec #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":bar"),
+      eval.Cell(kind: Keyword, keywordVal: ":foo"),
+      eval.Cell(kind: Long, longVal: 1),
+    ]
+  )
+

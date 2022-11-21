@@ -344,6 +344,31 @@ func dec*(args: seq[Cell]): Cell =
   checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
+func vec*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args, {List, Vector, Map, Set})
+  let
+    cell = args[0]
+    contents =
+      case cell.kind:
+      of List:
+        cell.listVal
+      of Vector:
+        cell.vectorVal
+      of Map:
+        var s: seq[Cell]
+        for (k, v) in cell.mapVal.pairs:
+          s.add(Cell(kind: Vector, vectorVal: @[k, v]))
+        s
+      of Set:
+        var s: seq[Cell]
+        for v in cell.setVal.items:
+          s.add(v)
+        s
+      else:
+        return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+  Cell(kind: Vector, vectorVal: contents)
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -365,6 +390,7 @@ func initContext*(): Context =
   result.vars["signum"] = Cell(kind: Fn, fnVal: signum)
   result.vars["inc"] = Cell(kind: Fn, fnVal: inc)
   result.vars["dec"] = Cell(kind: Fn, fnVal: dec)
+  result.vars["vec"] = Cell(kind: Fn, fnVal: vec)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
