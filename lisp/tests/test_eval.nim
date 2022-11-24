@@ -184,3 +184,8 @@ test "nth":
   ])
   check eval.eval(read.read("(nth #{:foo 1 :bar 1} 1)")[0]) == eval.Cell(kind: Keyword, keywordVal: ":foo")
 
+test "count":
+  check eval.eval(read.read("(count [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: Long, longVal: 3)
+  check eval.eval(read.read("(count {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Long, longVal: 2)
+  check eval.eval(read.read("(count #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: Long, longVal: 3)
+

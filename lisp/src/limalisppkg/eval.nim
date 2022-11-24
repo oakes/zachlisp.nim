@@ -409,6 +409,22 @@ func nth*(args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
 
+func count*(args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args[0], {List, Vector, Map, Set})
+  let cell = args[0]
+  case cell.kind:
+  of List:
+    Cell(kind: Long, longVal: cell.listVal.len)
+  of Vector:
+    Cell(kind: Long, longVal: cell.vectorVal.len)
+  of Map:
+    Cell(kind: Long, longVal: cell.mapVal.len)
+  of Set:
+    Cell(kind: Long, longVal: cell.setVal.len)
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -432,6 +448,7 @@ func initContext*(): Context =
   result.vars["dec"] = Cell(kind: Fn, fnVal: dec)
   result.vars["vec"] = Cell(kind: Fn, fnVal: vec)
   result.vars["nth"] = Cell(kind: Fn, fnVal: nth)
+  result.vars["count"] = Cell(kind: Fn, fnVal: count)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
