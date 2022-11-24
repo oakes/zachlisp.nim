@@ -26,6 +26,7 @@ type
     InvalidType,
     InvalidNumberOfArguments,
     MustHaveEvenNumberOfForms,
+    IndexOutOfBounds,
   Cell* = object
     case kind*: CellKind
     of Error:
@@ -369,6 +370,45 @@ func vec*(args: seq[Cell]): Cell =
         return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
   Cell(kind: Vector, vectorVal: contents)
 
+func nth*(args: seq[Cell]): Cell =
+  checkCount(args.len, 2, 2)
+  checkKind(args[0], {List, Vector, Map, Set})
+  checkKind(args[1], {Long})
+  let
+    cell = args[0]
+    index = args[1].longVal
+  case cell.kind:
+  of List:
+    if cell.listVal.len > index:
+      cell.listVal[index]
+    else:
+      Cell(kind: Error, error: IndexOutOfBounds)
+  of Vector:
+    if cell.vectorVal.len > index:
+      cell.vectorVal[index]
+    else:
+      Cell(kind: Error, error: IndexOutOfBounds)
+  of Map:
+    # TODO: make this more efficient
+    var s: seq[Cell]
+    for (k, v) in cell.mapVal.pairs:
+      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
+    if s.len > index:
+      s[index]
+    else:
+      Cell(kind: Error, error: IndexOutOfBounds)
+  of Set:
+    # TODO: make this more efficient
+    var s: seq[Cell]
+    for v in cell.setVal.items:
+      s.add(v)
+    if s.len > index:
+      s[index]
+    else:
+      Cell(kind: Error, error: IndexOutOfBounds)
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func initContext*(): Context =
   result.vars["="] = Cell(kind: Fn, fnVal: eq)
   result.vars[">"] = Cell(kind: Fn, fnVal: gt)
@@ -391,6 +431,7 @@ func initContext*(): Context =
   result.vars["inc"] = Cell(kind: Fn, fnVal: inc)
   result.vars["dec"] = Cell(kind: Fn, fnVal: dec)
   result.vars["vec"] = Cell(kind: Fn, fnVal: vec)
+  result.vars["nth"] = Cell(kind: Fn, fnVal: nth)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

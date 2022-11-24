@@ -177,3 +177,10 @@ test "vec":
     ]
   )
 
+test "nth":
+  check eval.eval(read.read("(nth [1 \"hi\" :wassup] 1)")[0]) == eval.Cell(kind: String, stringVal: "hi")
+  check eval.eval(read.read("(nth {:foo 1 :bar \"hi\"} 1)")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+  ])
+  check eval.eval(read.read("(nth #{:foo 1 :bar 1} 1)")[0]) == eval.Cell(kind: Keyword, keywordVal: ":foo")
+
