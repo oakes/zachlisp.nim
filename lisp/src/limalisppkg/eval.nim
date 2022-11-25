@@ -348,30 +348,29 @@ func dec*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
+template getContents(cell: Cell): untyped =
+  case cell.kind:
+  of List:
+    cell.listVal
+  of Vector:
+    cell.vectorVal
+  of Map:
+    var s: seq[Cell]
+    for (k, v) in cell.mapVal.pairs:
+      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
+    s
+  of Set:
+    var s: seq[Cell]
+    for v in cell.setVal.items:
+      s.add(v)
+    s
+  else:
+    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func vec*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
   checkKind(args, {List, Vector, Map, Set})
-  let
-    cell = args[0]
-    contents =
-      case cell.kind:
-      of List:
-        cell.listVal
-      of Vector:
-        cell.vectorVal
-      of Map:
-        var s: seq[Cell]
-        for (k, v) in cell.mapVal.pairs:
-          s.add(Cell(kind: Vector, vectorVal: @[k, v]))
-        s
-      of Set:
-        var s: seq[Cell]
-        for v in cell.setVal.items:
-          s.add(v)
-        s
-      else:
-        return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
-  Cell(kind: Vector, vectorVal: contents)
+  Cell(kind: Vector, vectorVal: getContents(args[0]))
 
 func nth*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
@@ -538,6 +537,11 @@ func name*(ctx: Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
 
+func cons*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 2, 2)
+  checkKind(args[1], {List, Vector, Map, Set})
+  Cell(kind: List, listVal: @[args[0]] & getContents(args[1]))
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -566,6 +570,7 @@ func initContext*(): Context =
   result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
   result.vars["str"] = Cell(kind: Fn, fnVal: str, fnStringVal: "str")
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
+  result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

@@ -162,20 +162,18 @@ test "vec":
     eval.Cell(kind: Keyword, keywordVal: ":wassup"),
   ])
   check eval.eval(read.read("(vec {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
-      eval.Cell(kind: Vector, vectorVal: @[
-        eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
-      ]),
-      eval.Cell(kind: Vector, vectorVal: @[
-        eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
-      ]),
-    ]
-  )
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
+    ]),
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+    ]),
+  ])
   check eval.eval(read.read("(vec #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
-      eval.Cell(kind: Keyword, keywordVal: ":bar"),
-      eval.Cell(kind: Keyword, keywordVal: ":foo"),
-      eval.Cell(kind: Long, longVal: 1),
-    ]
-  )
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+  ])
 
 test "nth":
   check eval.eval(read.read("(nth [1 \"hi\" :wassup] 1)")[0]) == eval.Cell(kind: String, stringVal: "hi")
@@ -215,3 +213,27 @@ test "str":
 test "name":
   check eval.eval(read.read("(name \"hi\")")[0]) == eval.Cell(kind: String, stringVal: "hi")
   check eval.eval(read.read("(name :hi)")[0]) == eval.Cell(kind: String, stringVal: "hi")
+
+test "cons":
+  check eval.eval(read.read("(cons 2 [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+  ])
+  check eval.eval(read.read("(cons 2 {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
+    ]),
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+    ]),
+  ])
+  check eval.eval(read.read("(cons 2 #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+  ])
+  check eval.eval(read.read("(cons 2 :yo)")[0]) == eval.Cell(kind: Error, error: InvalidType)
