@@ -211,3 +211,7 @@ test "str":
   var ctx = eval.initContext()
   ctx.printLimit = 10
   check eval.eval(ctx, read.read("(str \"this string is too long\")")[0]) == eval.Cell(kind: Error, error: PrintLengthLimitExceeded)
+
+test "name":
+  check eval.eval(read.read("(name \"hi\")")[0]) == eval.Cell(kind: String, stringVal: "hi")
+  check eval.eval(read.read("(name :hi)")[0]) == eval.Cell(kind: String, stringVal: "hi")

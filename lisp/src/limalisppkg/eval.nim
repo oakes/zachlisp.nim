@@ -527,6 +527,18 @@ func str*(ctx: Context, args: seq[Cell]): Cell =
     retCell.stringVal &= printedCell.stringVal
   retCell
 
+func name*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  checkKind(args[0], {String, Keyword}) # TODO: support symbols
+  let cell = args[0]
+  case cell.kind:
+  of String:
+    cell
+  of Keyword:
+    Cell(kind: String, stringVal: read.name(cell.keywordVal))
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -554,6 +566,7 @@ func initContext*(): Context =
   result.vars["count"] = Cell(kind: Fn, fnVal: count, fnStringVal: "count")
   result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
   result.vars["str"] = Cell(kind: Fn, fnVal: str, fnStringVal: "str")
+  result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
