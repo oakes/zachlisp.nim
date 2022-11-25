@@ -255,34 +255,33 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
     if name(cell.token).len == 0:
       res.error = InvalidKeyword
     @[res]
-  else:
-    if cell.kind == SpecialCharacter:
-      if index < cells.len:
-        let nextCells = parse(cells, index)
-        if nextCells.len == 1:
-          let nextCell = nextCells[0]
-          if cell.token[0] == hash and
-              nextCell.kind == Collection and
-              nextCell.error in {None, MustHaveEvenNumberOfForms}:
-            var res = nextCells[0]
-            res.delims[0].token = cell.token & res.delims[0].token
-            if res.delims[0].token in validOpenDelims:
-              # uneven number of forms is not an error if it's a set now
-              res.error = None
-            else:
-              res.error = InvalidDelimiter
-            return @[res]
-          elif nextCell.error == None:
-            return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
-        var res = cell
-        res.error = NothingValidAfter
-        @[res] & nextCells
-      else:
-        var res = cell
-        res.error = NothingValidAfter
-        @[res]
+  of SpecialCharacter:
+    if index < cells.len:
+      let nextCells = parse(cells, index)
+      if nextCells.len == 1:
+        let nextCell = nextCells[0]
+        if cell.token[0] == hash and
+            nextCell.kind == Collection and
+            nextCell.error in {None, MustHaveEvenNumberOfForms}:
+          var res = nextCells[0]
+          res.delims[0].token = cell.token & res.delims[0].token
+          if res.delims[0].token in validOpenDelims:
+            # uneven number of forms is not an error if it's a set now
+            res.error = None
+          else:
+            res.error = InvalidDelimiter
+          return @[res]
+        elif nextCell.error == None:
+          return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
+      var res = cell
+      res.error = NothingValidAfter
+      @[res] & nextCells
     else:
-      @[cell]
+      var res = cell
+      res.error = NothingValidAfter
+      @[res]
+  else:
+    @[cell]
 
 func parse*(cells: seq[Cell]): seq[Cell] =
   var index = 0
