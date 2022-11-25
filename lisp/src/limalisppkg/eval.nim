@@ -20,7 +20,6 @@ type
     NotImplemented,
     InvalidToken,
     VarDoesNotExist,
-    EmptyFnInvocation,
     NumberParseError,
     NotAFunction,
     InvalidType,
@@ -591,7 +590,7 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
           res.readCell = cell
         res
       else:
-        Cell(kind: Error, error: EmptyFnInvocation, readCell: cell)
+        Cell(kind: List, listVal: @[], readCell: cell)
     of Vector:
       Cell(kind: Vector, vectorVal: evalCells(ctx, cell.contents))
     of Map:
