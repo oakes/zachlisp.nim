@@ -1,7 +1,6 @@
 from ./read import nil
 import tables, sets, hashes
 from parseutils import nil
-from strutils import nil
 from math import nil
 
 type
@@ -430,10 +429,10 @@ func count*(ctx: Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
 
-func print(cell: Cell, limit: var int): Cell
+func print(cell: Cell, shouldEscape: bool, limit: var int): Cell
 
 template printCell(cell: Cell, limit: var int): untyped =
-  let printedCell = print(cell, limit)
+  let printedCell = print(cell, true, limit)
   if printedCell.kind == Error:
     return printedCell
   printedCell.stringVal
@@ -476,7 +475,7 @@ template toString[T](val: T, limit: var int): Cell =
   else:
     Cell(kind: String, stringVal: s)
 
-func print(cell: Cell, limit: var int): Cell =
+func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   case cell.kind:
   of Error:
     cell
@@ -487,10 +486,14 @@ func print(cell: Cell, limit: var int): Cell =
   of Double:
     cell.doubleVal.toString(limit)
   of String:
-    if cell.readCell.kind == read.String:
-      cell.readCell.stringToken.toString(limit)
+    if shouldEscape:
+      var s = ""
+      for ch in cell.stringVal:
+        addEscapedChar(s, ch)
+      s = "\"" & s & "\""
+      s.toString(limit)
     else:
-      strutils.escape(cell.stringVal).toString(limit)
+      cell.readCell.stringValue.toString(limit)
   of Keyword:
     cell.keywordVal.toString(limit)
   of Fn:
@@ -511,7 +514,18 @@ func print(cell: Cell, limit: var int): Cell =
 func print*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
   var limit = ctx.printLimit
-  print(args[0], limit)
+  print(args[0], true, limit)
+
+func str*(ctx: Context, args: seq[Cell]): Cell =
+  var
+    limit = ctx.printLimit
+    retCell = Cell(kind: String, stringVal: "")
+  for cell in args:
+    let printedCell = print(cell, false, limit)
+    if printedCell.kind == Error:
+      return printedCell
+    retCell.stringVal &= printedCell.stringVal
+  retCell
 
 func initContext*(): Context =
   result.printLimit = printLimit
@@ -539,6 +553,7 @@ func initContext*(): Context =
   result.vars["nth"] = Cell(kind: Fn, fnVal: nth, fnStringVal: "nth")
   result.vars["count"] = Cell(kind: Fn, fnVal: count, fnStringVal: "count")
   result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
+  result.vars["str"] = Cell(kind: Fn, fnVal: str, fnStringVal: "str")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

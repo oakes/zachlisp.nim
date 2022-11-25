@@ -191,7 +191,7 @@ test "count":
 
 test "print":
   check eval.eval(read.read("(print 1)")[0]) == eval.Cell(kind: String, stringVal: "1")
-  check eval.eval(read.read("(print \"hi\nthere!\")")[0]) == eval.Cell(kind: String, stringVal: "\"hi\nthere!\"")
+  check eval.eval(read.read("(print \"hi\nthere!\")")[0]) == eval.Cell(kind: String, stringVal: "\"hi\\nthere!\"")
   check eval.eval(read.read("(print :wassup)")[0]) == eval.Cell(kind: String, stringVal: ":wassup")
   check eval.eval(read.read("(print [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: String, stringVal: "[1 \"hi\" :wassup]")
   check eval.eval(read.read("(print {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: String, stringVal: "{:bar \"hi\" :foo 1}")
@@ -199,3 +199,15 @@ test "print":
   var ctx = eval.initContext()
   ctx.printLimit = 10
   check eval.eval(ctx, read.read("(print \"this string is too long\")")[0]) == eval.Cell(kind: Error, error: PrintLengthLimitExceeded)
+
+test "str":
+  check eval.eval(read.read("(str 1)")[0]) == eval.Cell(kind: String, stringVal: "1")
+  check eval.eval(read.read("(str \"hi\nthere!\")")[0]) == eval.Cell(kind: String, stringVal: "hi\nthere!")
+  check eval.eval(read.read("(str :wassup)")[0]) == eval.Cell(kind: String, stringVal: ":wassup")
+  check eval.eval(read.read("(str [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: String, stringVal: "[1 \"hi\" :wassup]")
+  check eval.eval(read.read("(str {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: String, stringVal: "{:bar \"hi\" :foo 1}")
+  check eval.eval(read.read("(str #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: String, stringVal: "#{:bar :foo 1}")
+  check eval.eval(read.read("(str \"hello\" \"world\")")[0]) == eval.Cell(kind: String, stringVal: "helloworld")
+  var ctx = eval.initContext()
+  ctx.printLimit = 10
+  check eval.eval(ctx, read.read("(str \"this string is too long\")")[0]) == eval.Cell(kind: Error, error: PrintLengthLimitExceeded)
