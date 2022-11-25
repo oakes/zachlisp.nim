@@ -120,6 +120,9 @@ test "lexing":
     check cells[6].position == (3, 1) # :foo
 
 test "parsing":
+  check read.parse(read.lex(":")) == @[
+    Cell(kind: Keyword, token: ":", error: InvalidKeyword),
+  ]
   check read.parse(read.lex("(+ 1 1)")) == @[
     Cell(
       kind: Collection,

@@ -24,6 +24,7 @@ type
     NoMatchingUnquote,
     InvalidEscape,
     InvalidDelimiter,
+    InvalidKeyword,
   Position = tuple[line: int, column: int]
   Cell* = object
     case kind*: CellKind
@@ -226,6 +227,15 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
   delim.error = NoMatchingCloseDelimiter
   @[delim] & contents
 
+func name*(s: string): string =
+  var i = 0
+  for ch in s:
+    if ch == ':':
+      i+=1
+    else:
+      break
+  s[i ..< s.len]
+
 func parse*(cells: seq[Cell], index: var int): seq[Cell] =
   if index == cells.len:
     return @[]
@@ -239,6 +249,11 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
   of CloseDelimiter:
     var res = cell
     res.error = NoMatchingOpenDelimiter
+    @[res]
+  of Keyword:
+    var res = cell
+    if name(cell.token).len == 0:
+      res.error = InvalidKeyword
     @[res]
   else:
     if cell.kind == SpecialCharacter:
