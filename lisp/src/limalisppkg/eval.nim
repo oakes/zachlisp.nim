@@ -200,6 +200,33 @@ template evalCells(ctx: Context, readCells: seq[read.Cell]): seq[Cell] =
       cells.add(res)
   cells
 
+template toSeq(cell: Cell): untyped =
+  case cell.kind:
+  of List:
+    cell.listVal
+  of Vector:
+    cell.vectorVal
+  of Map:
+    var s: seq[Cell]
+    for (k, v) in cell.mapVal.pairs:
+      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
+    s
+  of Set:
+    var s: seq[Cell]
+    for v in cell.setVal.items:
+      s.add(v)
+    s
+  of Nil:
+    newSeq[Cell]()
+  else:
+    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
+func nilPun(cell: Cell): Cell =
+  if cell.kind == Nil:
+    Cell(kind: Vector, vectorVal: @[])
+  else:
+    cell
+
 # public functions
 
 func eq*(ctx: Context, args: seq[Cell]): Cell =
@@ -355,34 +382,15 @@ func dec*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
-template toSeq(cell: Cell): untyped =
-  case cell.kind:
-  of List:
-    cell.listVal
-  of Vector:
-    cell.vectorVal
-  of Map:
-    var s: seq[Cell]
-    for (k, v) in cell.mapVal.pairs:
-      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
-    s
-  of Set:
-    var s: seq[Cell]
-    for v in cell.setVal.items:
-      s.add(v)
-    s
-  else:
-    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
-
 func vec*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
-  let cell = args[0]
+  let cell = args[0].nilPun
   checkKind(cell, {List, Vector, Map, Set})
   Cell(kind: Vector, vectorVal: toSeq(cell))
 
 func nth*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
-  let cell = args[0]
+  let cell = args[0].nilPun
   checkKind(cell, {List, Vector, Map, Set})
   checkKind(args[1], {Long})
   let index = args[1].longVal
@@ -420,7 +428,7 @@ func nth*(ctx: Context, args: seq[Cell]): Cell =
 
 func count*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
-  let cell = args[0]
+  let cell = args[0].nilPun
   checkKind(cell, {List, Vector, Map, Set})
   case cell.kind:
   of List:
@@ -485,7 +493,10 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   of Error:
     cell
   of Nil:
-    "nil".toString(limit)
+    if shouldEscape:
+      "nil".toString(limit)
+    else:
+      "".toString(limit)
   of Boolean:
     cell.booleanVal.toString(limit)
   of Long:
@@ -570,20 +581,20 @@ func conj(cell: Cell, contents: seq[Cell]): Cell =
 
 func conj*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2)
-  let cell = args[0]
+  let cell = args[0].nilPun
   checkKind(cell, {List, Vector, Map, Set})
   conj(cell, args[1 ..< args.len])
 
 func cons*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2)
-  let lastCell = args[args.len-1]
+  let lastCell = args[args.len-1].nilPun
   checkKind(lastCell, {List, Vector, Map, Set})
   Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
 
 func get*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 3)
   let
-    cell = args[0]
+    cell = args[0].nilPun
     key = args[1]
     notFound =
       if args.len == 3:
@@ -648,6 +659,28 @@ func double*(ctx: Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
 
+func concat*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
+  checkKind(args, {List, Vector, Map, Set, Nil})
+  var ret = Cell(kind: Nil)
+  for cell in args:
+    case ret.kind:
+    of Nil:
+      case cell.kind:
+      of List:
+        ret = cell
+      of Nil:
+        continue
+      else:
+        ret = Cell(kind: Vector, vectorVal: toSeq(cell))
+    of List:
+      ret.listVal &= toSeq(cell)
+    of Vector:
+      ret.vectorVal &= toSeq(cell)
+    else:
+      return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+  ret
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -682,6 +715,7 @@ func initContext*(): Context =
   result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
   result.vars["long"] = Cell(kind: Fn, fnVal: long, fnStringVal: "long")
   result.vars["double"] = Cell(kind: Fn, fnVal: double, fnStringVal: "double")
+  result.vars["concat"] = Cell(kind: Fn, fnVal: concat, fnStringVal: "concat")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

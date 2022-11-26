@@ -183,6 +183,7 @@ test "vec":
     eval.Cell(kind: Keyword, keywordVal: ":foo"),
     eval.Cell(kind: Long, longVal: 1),
   ])
+  check eval.eval(read.read("(vec nil)")[0]) == eval.Cell(kind: Vector, vectorVal: @[])
 
 test "nth":
   check eval.eval(read.read("(nth [1 \"hi\" :wassup] 1)")[0]) == eval.Cell(kind: String, stringVal: "hi")
@@ -190,11 +191,14 @@ test "nth":
     eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
   ])
   check eval.eval(read.read("(nth #{:foo 1 :bar 1} 1)")[0]) == eval.Cell(kind: Keyword, keywordVal: ":foo")
+  check eval.eval(read.read("(nth [] 0)")[0]) == eval.Cell(kind: Error, error: IndexOutOfBounds)
+  check eval.eval(read.read("(nth nil 0)")[0]) == eval.Cell(kind: Error, error: IndexOutOfBounds)
 
 test "count":
   check eval.eval(read.read("(count [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: Long, longVal: 3)
   check eval.eval(read.read("(count {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Long, longVal: 2)
   check eval.eval(read.read("(count #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: Long, longVal: 3)
+  check eval.eval(read.read("(count nil)")[0]) == eval.Cell(kind: Long, longVal: 0)
 
 test "print":
   check eval.eval(read.read("(print 1)")[0]) == eval.Cell(kind: String, stringVal: "1")
@@ -215,6 +219,8 @@ test "str":
   check eval.eval(read.read("(str {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: String, stringVal: "{:bar \"hi\" :foo 1}")
   check eval.eval(read.read("(str #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: String, stringVal: "#{:bar :foo 1}")
   check eval.eval(read.read("(str \"hello\" \"world\")")[0]) == eval.Cell(kind: String, stringVal: "helloworld")
+  check eval.eval(read.read("(str nil 123)")[0]) == eval.Cell(kind: String, stringVal: "123")
+  check eval.eval(read.read("(str {:a nil})")[0]) == eval.Cell(kind: String, stringVal: "{:a nil}")
   var ctx = eval.initContext()
   ctx.printLimit = 10
   check eval.eval(ctx, read.read("(str \"this string is too long\")")[0]) == eval.Cell(kind: Error, error: PrintLengthLimitExceeded)
@@ -246,6 +252,9 @@ test "conj":
     eval.Cell(kind: Long, longVal: 1),
     eval.Cell(kind: Long, longVal: 2),
   ].toHashSet)
+  check eval.eval(read.read("(conj nil 2)")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+  ])
   check eval.eval(read.read("(conj :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)
 
 test "cons":
@@ -275,6 +284,9 @@ test "cons":
     eval.Cell(kind: Keyword, keywordVal: ":foo"),
     eval.Cell(kind: Long, longVal: 1),
   ])
+  check eval.eval(read.read("(cons 2 nil)")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+  ])
   check eval.eval(read.read("(cons 2 :yo)")[0]) == eval.Cell(kind: Error, error: InvalidType)
 
 test "get":
@@ -283,4 +295,37 @@ test "get":
   check eval.eval(read.read("(get [1] 1 :hi)")[0]) == eval.Cell(kind: Keyword, keywordVal: ":hi")
   check eval.eval(read.read("(get {:foo 1 :bar \"hi\"} :foo)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(get #{:foo 1 :bar 1} :foo)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(get nil 2)")[0]) == eval.Cell(kind: Nil)
   check eval.eval(read.read("(get :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "concat":
+  check eval.eval(read.read("(concat () [1 2 3])")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Long, longVal: 3),
+  ])
+  check eval.eval(read.read("(concat [1 \"hi\" :wassup] #{2})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(concat {:foo 1 :bar \"hi\"} [2])")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
+    ]),
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+    ]),
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(concat #{:foo 1 :bar 1} [2])")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(concat nil [2])")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(concat :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)
