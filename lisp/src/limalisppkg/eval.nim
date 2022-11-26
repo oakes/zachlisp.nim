@@ -594,6 +594,20 @@ func cons*(ctx: Context, args: seq[Cell]): Cell =
 func list*(ctx: Context, args: seq[Cell]): Cell =
   Cell(kind: List, listVal: args)
 
+func vector*(ctx: Context, args: seq[Cell]): Cell =
+  Cell(kind: Vector, vectorVal: args)
+
+func hashMap*(ctx: Context, args: seq[Cell]): Cell =
+  if args.len mod 2 != 0:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)
+  var t: Table[Cell, Cell]
+  for i in 0 ..< int(args.len / 2):
+    t[args[i*2]] = args[i*2+1]
+  Cell(kind: Map, mapVal: t)
+
+func hashSet*(ctx: Context, args: seq[Cell]): Cell =
+  Cell(kind: Set, setVal: args.toHashSet)
+
 func get*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 3)
   let
@@ -749,6 +763,9 @@ func initContext*(): Context =
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
   result.vars["list"] = Cell(kind: Fn, fnVal: list, fnStringVal: "list")
+  result.vars["vector"] = Cell(kind: Fn, fnVal: vector, fnStringVal: "vector")
+  result.vars["hash-map"] = Cell(kind: Fn, fnVal: hashMap, fnStringVal: "hash-map")
+  result.vars["hash-set"] = Cell(kind: Fn, fnVal: hashSet, fnStringVal: "hash-set")
   result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
   result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
   result.vars["long"] = Cell(kind: Fn, fnVal: long, fnStringVal: "long")

@@ -296,6 +296,26 @@ test "list":
     eval.Cell(kind: String, stringVal: "hi"),
   ])
 
+test "vector":
+  check eval.eval(read.read("(vector 1 :a \"hi\")")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Keyword, keywordVal: ":a"),
+    eval.Cell(kind: String, stringVal: "hi"),
+  ])
+
+test "hash-map":
+  check eval.eval(read.read("(hash-map :foo 1 :bar \"hi\")")[0]) == eval.Cell(kind: Map, mapVal: {
+    eval.Cell(kind: Keyword, keywordVal: ":foo"): eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Keyword, keywordVal: ":bar"): eval.Cell(kind: String, stringVal: "hi"),
+  }.toTable)
+
+test "hash-set":
+  check eval.eval(read.read("(hash-set :foo 1 :bar 1)")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+  ].toHashSet)
+
 test "get":
   check eval.eval(read.read("(get [1] 0)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(get [1] 1)")[0]) == eval.Cell(kind: Nil)
