@@ -355,7 +355,7 @@ func dec*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
-template getContents(cell: Cell): untyped =
+template toSeq(cell: Cell): untyped =
   case cell.kind:
   of List:
     cell.listVal
@@ -378,7 +378,7 @@ func vec*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
   let cell = args[0]
   checkKind(cell, {List, Vector, Map, Set})
-  Cell(kind: Vector, vectorVal: getContents(cell))
+  Cell(kind: Vector, vectorVal: toSeq(cell))
 
 func nth*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
@@ -578,7 +578,7 @@ func cons*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2)
   let lastCell = args[args.len-1]
   checkKind(lastCell, {List, Vector, Map, Set})
-  Cell(kind: List, listVal: args[0 ..< args.len-1] & getContents(lastCell))
+  Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
 
 func get*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 3)
