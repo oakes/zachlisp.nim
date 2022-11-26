@@ -6,6 +6,7 @@ from math import nil
 type
   CellKind* = enum
     Error,
+    Nil,
     Boolean,
     Long,
     Double,
@@ -31,6 +32,8 @@ type
     case kind*: CellKind
     of Error:
       error*: ErrorKind
+    of Nil:
+      discard
     of Boolean:
       booleanVal*: bool
     of Long:
@@ -64,12 +67,19 @@ const
     "{": Map,
     "#{": Set,
   }.toTable
+  specialSyms = {
+    "true": Cell(kind: Boolean, booleanVal: true),
+    "false": Cell(kind: Boolean, booleanVal: false),
+    "nil": Cell(kind: Nil),
+  }.toTable
   printLimit = 10000
 
 func hash*(a: Cell): Hash =
   case a.kind:
   of Error:
     a.error.hash
+  of Nil:
+    nil.hash
   of Boolean:
     a.booleanVal.hash
   of Long:
@@ -96,6 +106,8 @@ func `==`*(a, b: Cell): bool =
     case a.kind:
     of Error:
       a.error == b.error
+    of Nil:
+      true
     of Boolean:
       a.booleanVal == b.booleanVal
     of Long:
@@ -477,6 +489,8 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   case cell.kind:
   of Error:
     cell
+  of Nil:
+    "nil".toString(limit)
   of Boolean:
     cell.booleanVal.toString(limit)
   of Long:
@@ -644,7 +658,11 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
     else:
       Cell(kind: Error, error: NotImplemented, readCell: cell)
   of read.Symbol:
-    if cell.token in ctx.vars:
+    if cell.token in specialSyms:
+      var ret = specialSyms[cell.token]
+      ret.readCell = cell
+      ret
+    elif cell.token in ctx.vars:
       var ret = ctx.vars[cell.token]
       ret.readCell = cell
       ret
