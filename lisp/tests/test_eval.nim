@@ -289,6 +289,13 @@ test "cons":
   ])
   check eval.eval(read.read("(cons 2 :yo)")[0]) == eval.Cell(kind: Error, error: InvalidType)
 
+test "list":
+  check eval.eval(read.read("(list 1 :a \"hi\")")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Keyword, keywordVal: ":a"),
+    eval.Cell(kind: String, stringVal: "hi"),
+  ])
+
 test "get":
   check eval.eval(read.read("(get [1] 0)")[0]) == eval.Cell(kind: Long, longVal: 1)
   check eval.eval(read.read("(get [1] 1)")[0]) == eval.Cell(kind: Nil)
@@ -329,3 +336,23 @@ test "concat":
     eval.Cell(kind: Long, longVal: 2),
   ])
   check eval.eval(read.read("(concat :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "assoc":
+  check eval.eval(read.read("(assoc (list 1 2) 0 3)")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 3),
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(assoc [1 \"hi\"] 1 :wassup)")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+  ])
+  check eval.eval(read.read("(assoc {:foo 1} :bar \"hi\")")[0]) == eval.Cell(kind: Map, mapVal: {
+    eval.Cell(kind: Keyword, keywordVal: ":bar"): eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"): eval.Cell(kind: Long, longVal: 1),
+  }.toTable)
+  check eval.eval(read.read("(assoc nil :bar \"hi\")")[0]) == eval.Cell(kind: Map, mapVal: {
+    eval.Cell(kind: Keyword, keywordVal: ":bar"): eval.Cell(kind: String, stringVal: "hi"),
+  }.toTable)
+  check eval.eval(read.read("(assoc #{:foo 1 :bar 1} 0 1)")[0]) == eval.Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(assoc [] 0 1)")[0]) == eval.Cell(kind: Error, error: IndexOutOfBounds)
+  check eval.eval(read.read("(assoc [] 0)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)

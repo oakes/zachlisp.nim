@@ -591,6 +591,9 @@ func cons*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(lastCell, {List, Vector, Map, Set})
   Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
 
+func list*(ctx: Context, args: seq[Cell]): Cell =
+  Cell(kind: List, listVal: args)
+
 func get*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 3)
   let
@@ -681,6 +684,40 @@ func concat*(ctx: Context, args: seq[Cell]): Cell =
       return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
   ret
 
+func assoc*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1)
+  var cell =
+    if args[0].kind == Nil:
+      Cell(kind: Map)
+    else:
+      args[0]
+  checkKind(cell, {List, Vector, Map})
+  let cells = args[1 ..< args.len]
+  if cells.len mod 2 != 0:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)
+  var pairs: seq[(Cell, Cell)] = @[]
+  for i in 0 ..< int(cells.len / 2):
+    pairs.add((cells[i*2], cells[i*2+1]))
+  for (key, val) in pairs:
+    case cell.kind:
+    of List:
+      if key.kind != Long:
+        return Cell(kind: Error, error: InvalidType, readCell: key.readCell)
+      elif cell.listVal.len <= key.longVal:
+        return Cell(kind: Error, error: IndexOutOfBounds, readCell: key.readCell)
+      cell.listVal[key.longVal] = val
+    of Vector:
+      if key.kind != Long:
+        return Cell(kind: Error, error: InvalidType, readCell: key.readCell)
+      elif cell.vectorVal.len <= key.longVal:
+        return Cell(kind: Error, error: IndexOutOfBounds, readCell: key.readCell)
+      cell.vectorVal[key.longVal] = val
+    of Map:
+      cell.mapVal[key] = val
+    else:
+      return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+  cell
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -711,11 +748,13 @@ func initContext*(): Context =
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
+  result.vars["list"] = Cell(kind: Fn, fnVal: list, fnStringVal: "list")
   result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
   result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
   result.vars["long"] = Cell(kind: Fn, fnVal: long, fnStringVal: "long")
   result.vars["double"] = Cell(kind: Fn, fnVal: double, fnStringVal: "double")
   result.vars["concat"] = Cell(kind: Fn, fnVal: concat, fnStringVal: "concat")
+  result.vars["assoc"] = Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
