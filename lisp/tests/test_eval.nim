@@ -272,3 +272,11 @@ test "cons":
     eval.Cell(kind: Long, longVal: 1),
   ])
   check eval.eval(read.read("(cons 2 :yo)")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
+test "get":
+  check eval.eval(read.read("(get [1] 0)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(get [1] 1)")[0]) == eval.Cell(kind: Nil)
+  check eval.eval(read.read("(get [1] 1 :hi)")[0]) == eval.Cell(kind: Keyword, keywordVal: ":hi")
+  check eval.eval(read.read("(get {:foo 1 :bar \"hi\"} :foo)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(get #{:foo 1 :bar 1} :foo)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+  check eval.eval(read.read("(get :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)

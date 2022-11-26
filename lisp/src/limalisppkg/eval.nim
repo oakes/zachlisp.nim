@@ -585,6 +585,41 @@ func cons*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(lastCell, {List, Vector, Map, Set})
   Cell(kind: List, listVal: args[0 ..< args.len-1] & getContents(lastCell))
 
+func get*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 2, 3)
+  let
+    cell = args[0]
+    key = args[1]
+    notFound =
+      if args.len == 3:
+        args[2]
+      else:
+        Cell(kind: Nil)
+  checkKind(cell, {List, Vector, Map, Set})
+  case cell.kind:
+  of List:
+    if key.kind == Long and cell.listVal.len > key.longVal:
+      cell.listVal[key.longVal]
+    else:
+      notFound
+  of Vector:
+    if key.kind == Long and cell.vectorVal.len > key.longVal:
+      cell.vectorVal[key.longVal]
+    else:
+      notFound
+  of Map:
+    if key in cell.mapVal:
+      cell.mapVal[key]
+    else:
+      notFound
+  of Set:
+    if key in cell.setVal:
+      specialSyms["true"]
+    else:
+      specialSyms["false"]
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -615,6 +650,7 @@ func initContext*(): Context =
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
+  result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
