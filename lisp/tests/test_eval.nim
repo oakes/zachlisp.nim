@@ -10,10 +10,12 @@ test "numbers":
   check eval.eval(read.read("-42")[0]) == eval.Cell(kind: Long, longVal: -42)
   check eval.eval(read.read("-42.0")[0]) == eval.Cell(kind: Double, doubleVal: -42.0)
 
-test "special symbols":
+test "boolean and nil":
   check eval.eval(read.read("true")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
   check eval.eval(read.read("false")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
   check eval.eval(read.read("nil")[0]) == eval.Cell(kind: Nil)
+  check eval.eval(read.read("(boolean nil)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+  check eval.eval(read.read("(boolean 123)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
 
 test "=":
   check eval.eval(read.read("(= 1 1 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)

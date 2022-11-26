@@ -614,11 +614,22 @@ func get*(ctx: Context, args: seq[Cell]): Cell =
       notFound
   of Set:
     if key in cell.setVal:
-      specialSyms["true"]
+      Cell(kind: Boolean, booleanVal: true)
     else:
-      specialSyms["false"]
+      Cell(kind: Boolean, booleanVal: false)
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
+func boolean*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  case cell.kind:
+  of Boolean:
+    cell
+  of Nil:
+    Cell(kind: Boolean, booleanVal: false)
+  else:
+    Cell(kind: Boolean, booleanVal: true)
 
 func initContext*(): Context =
   result.printLimit = printLimit
@@ -651,6 +662,7 @@ func initContext*(): Context =
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
   result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
+  result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
