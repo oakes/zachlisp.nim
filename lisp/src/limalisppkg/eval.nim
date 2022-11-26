@@ -67,11 +67,6 @@ const
     "{": Map,
     "#{": Set,
   }.toTable
-  specialSyms = {
-    "true": Cell(kind: Boolean, booleanVal: true),
-    "false": Cell(kind: Boolean, booleanVal: false),
-    "nil": Cell(kind: Nil),
-  }.toTable
   printLimit = 10000
 
 func hash*(a: Cell): Hash =
@@ -730,16 +725,16 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
     else:
       Cell(kind: Error, error: NotImplemented, readCell: cell)
   of read.Symbol:
-    if cell.token in specialSyms:
-      var ret = specialSyms[cell.token]
-      ret.readCell = cell
-      ret
-    elif cell.token in ctx.vars:
+    if cell.token in ctx.vars:
       var ret = ctx.vars[cell.token]
       ret.readCell = cell
       ret
     else:
       Cell(kind: Error, error: VarDoesNotExist, readCell: cell)
+  of read.Nil:
+    Cell(kind: Nil)
+  of read.Boolean:
+    Cell(kind: Boolean, booleanVal: cell.token == "true")
   of read.Number:
     var periodCount = 0
     for ch in cell.token:

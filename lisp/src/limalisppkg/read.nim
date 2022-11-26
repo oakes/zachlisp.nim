@@ -9,6 +9,8 @@ type
     OpenDelimiter,
     CloseDelimiter,
     Symbol,
+    Nil,
+    Boolean,
     Number,
     Keyword,
     SpecialCharacter,
@@ -64,6 +66,11 @@ const
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
   emptyCell = Cell(kind: Whitespace, token: "")
   dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
+  specialSyms = {
+    "true": Cell(kind: Boolean, token: "true"),
+    "false": Cell(kind: Boolean, token: "false"),
+    "nil": Cell(kind: Nil, token: "nil"),
+  }.toTable
 
 func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:
@@ -163,19 +170,16 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         if temp.token == "-":
           temp = Cell(kind: Number, token: temp.token & str, position: temp.position)
         else:
-          save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol, Keyword})
+          save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol})
         continue
       of whitespace:
         save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace})
-        continue
-      of colon:
-        save(result, Cell(kind: Keyword, token: str, position: position), {Keyword})
         continue
       of specialCharacters:
         save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
         continue
       of hash:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol, Keyword})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol})
         continue
       of semicolon:
         save(result, Cell(kind: Comment, token: str, position: position), {})
@@ -195,7 +199,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         discard
 
     # all other chars
-    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number, Keyword})
+    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number})
 
   if temp.kind == String:
     temp.error = NoMatchingUnquote
@@ -230,7 +234,7 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
 func name*(s: string): string =
   var i = 0
   for ch in s:
-    if ch == ':':
+    if ch == colon:
       i+=1
     else:
       break
@@ -250,11 +254,16 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
     var res = cell
     res.error = NoMatchingOpenDelimiter
     @[res]
-  of Keyword:
-    var res = cell
-    if name(cell.token).len == 0:
-      res.error = InvalidKeyword
-    @[res]
+  of Symbol:
+    if cell.token in specialSyms:
+      @[specialSyms[cell.token]]
+    elif cell.token[0] == colon:
+      var res = Cell(kind: Keyword, token: cell.token)
+      if name(res.token).len == 0:
+        res.error = InvalidKeyword
+      @[res]
+    else:
+      @[cell]
   of SpecialCharacter:
     if index < cells.len:
       let nextCells = parse(cells, index)

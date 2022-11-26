@@ -30,13 +30,13 @@ test "lexing":
   ]
   check read.lex("{:age 42}") == @[
     Cell(kind: OpenDelimiter, token: "{"),
-    Cell(kind: Keyword, token: ":age"),
+    Cell(kind: Symbol, token: ":age"),
     Cell(kind: Number, token: "42"),
     Cell(kind: CloseDelimiter, token: "}"),
   ]
   check read.lex("^:callable") == @[
     Cell(kind: SpecialCharacter, token: "^"),
-    Cell(kind: Keyword, token: ":callable"),
+    Cell(kind: Symbol, token: ":callable"),
   ]
   check read.lex("'(1, 2, 3)") == @[
     Cell(kind: SpecialCharacter, token: "'"),
@@ -81,7 +81,7 @@ test "lexing":
     Cell(kind: String, stringToken: "\"hello", error: NoMatchingUnquote),
   ]
   check read.lex(":hello123") == @[
-    Cell(kind: Keyword, token: ":hello123"),
+    Cell(kind: Symbol, token: ":hello123"),
   ]
   check read.lex("\\n") == @[
     Cell(kind: Character, token: "\\n"),
@@ -122,6 +122,14 @@ test "lexing":
 test "parsing":
   check read.parse(read.lex(":")) == @[
     Cell(kind: Keyword, token: ":", error: InvalidKeyword),
+  ]
+  check read.parse(read.lex(":hello")) == @[
+    Cell(kind: Keyword, token: ":hello"),
+  ]
+  check read.parse(read.lex("true false nil")) == @[
+    Cell(kind: Boolean, token: "true"),
+    Cell(kind: Boolean, token: "false"),
+    Cell(kind: Nil, token: "nil"),
   ]
   check read.parse(read.lex("(+ 1 1)")) == @[
     Cell(
