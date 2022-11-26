@@ -330,6 +330,20 @@ func divide*(ctx: Context, args: seq[Cell]): Cell =
     res /= arg.toDouble
   Cell(kind: Double, doubleVal: res)
 
+func isNaN*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  checkKind(cell, {Long, Double})
+  if cell.kind == Double:
+    Cell(kind: Boolean, booleanVal: math.isNaN(cell.doubleVal))
+  else:
+    Cell(kind: Boolean, booleanVal: false)
+
+func `mod`*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 2, 2)
+  checkKind(args, {Long})
+  Cell(kind: Long, longVal: args[0].longVal mod args[1].longVal)
+
 func pow*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
   checkKind(args, {Long, Double})
@@ -767,6 +781,8 @@ func initContext*(): Context =
   result.vars["-"] = Cell(kind: Fn, fnVal: minus, fnStringVal: "-")
   result.vars["*"] = Cell(kind: Fn, fnVal: times, fnStringVal: "*")
   result.vars["/"] = Cell(kind: Fn, fnVal: divide, fnStringVal: "/")
+  result.vars["nan?"] = Cell(kind: Fn, fnVal: isNaN, fnStringVal: "nan?")
+  result.vars["mod"] = Cell(kind: Fn, fnVal: `mod`, fnStringVal: "mod")
   result.vars["pow"] = Cell(kind: Fn, fnVal: pow, fnStringVal: "pow")
   result.vars["exp"] = Cell(kind: Fn, fnVal: exp, fnStringVal: "exp")
   result.vars["floor"] = Cell(kind: Fn, fnVal: floor, fnStringVal: "floor")
@@ -797,6 +813,7 @@ func initContext*(): Context =
   result.vars["assoc"] = Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc")
   result.vars["keys"] = Cell(kind: Fn, fnVal: keys, fnStringVal: "keys")
   result.vars["values"] = Cell(kind: Fn, fnVal: values, fnStringVal: "values")
+  result.vars["##NaN"] = Cell(kind: Double, doubleVal: NaN)
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

@@ -88,6 +88,13 @@ test "/":
   check eval.eval(read.read("(/ 1 \"hi\")")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(/)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
 
+test "nan?":
+  check eval.eval(read.read("(nan? 1)")[0]) == eval.Cell(kind: Boolean, booleanVal: false)
+  check eval.eval(read.read("(nan? ##NaN)")[0]) == eval.Cell(kind: Boolean, booleanVal: true)
+
+test "mod":
+  check eval.eval(read.read("(mod 3 2)")[0]) == eval.Cell(kind: Long, longVal: 1)
+
 test "pow":
   check eval.eval(read.read("(pow 2 3)")[0]) == eval.Cell(kind: Double, doubleVal: 8.0)
   check eval.eval(read.read("(pow 2.5 2)")[0]) == eval.Cell(kind: Double, doubleVal: 6.25)

@@ -27,6 +27,7 @@ type
     InvalidEscape,
     InvalidDelimiter,
     InvalidKeyword,
+    InvalidSpecialLiteral,
   Position = tuple[line: int, column: int]
   Cell* = object
     case kind*: CellKind
@@ -179,7 +180,7 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
         continue
       of hash:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol, SpecialCharacter})
         continue
       of semicolon:
         save(result, Cell(kind: Comment, token: str, position: position), {})
@@ -281,7 +282,14 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
             res.error = InvalidDelimiter
           return @[res]
         elif nextCell.error == None:
-          return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
+          if cell.token == "##":
+            case nextCell.token:
+            of "NaN":
+              return @[Cell(kind: Symbol, token: "##NaN", position: cell.position)]
+            else:
+              return @[Cell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
+          else:
+            return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
       var res = cell
       res.error = NothingValidAfter
       @[res] & nextCells
