@@ -1,6 +1,7 @@
 from ./read import nil
 import tables, sets, hashes
 from parseutils import nil
+from sequtils import nil
 from math import nil
 
 type
@@ -741,6 +742,18 @@ func assoc*(ctx: Context, args: seq[Cell]): Cell =
       return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
   cell
 
+func keys*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  checkKind(cell, {Map})
+  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.keys))
+
+func values*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  checkKind(cell, {Map})
+  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values))
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -782,6 +795,8 @@ func initContext*(): Context =
   result.vars["double"] = Cell(kind: Fn, fnVal: double, fnStringVal: "double")
   result.vars["concat"] = Cell(kind: Fn, fnVal: concat, fnStringVal: "concat")
   result.vars["assoc"] = Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc")
+  result.vars["keys"] = Cell(kind: Fn, fnVal: keys, fnStringVal: "keys")
+  result.vars["values"] = Cell(kind: Fn, fnVal: values, fnStringVal: "values")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:

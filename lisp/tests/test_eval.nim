@@ -397,3 +397,15 @@ test "assoc":
   check eval.eval(read.read("(assoc #{:foo 1 :bar 1} 0 1)")[0]) == eval.Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(assoc [] 0 1)")[0]) == eval.Cell(kind: Error, error: IndexOutOfBounds)
   check eval.eval(read.read("(assoc [] 0)")[0]) == eval.Cell(kind: Error, error: InvalidNumberOfArguments)
+
+test "keys":
+  check eval.eval(read.read("(keys {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+  ])
+
+test "values":
+  check eval.eval(read.read("(values {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Long, longVal: 1),
+  ])
