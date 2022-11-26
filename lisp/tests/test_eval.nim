@@ -9,6 +9,8 @@ test "numbers":
   check eval.eval(read.read("42.0")[0]) == eval.Cell(kind: Double, doubleVal: 42.0)
   check eval.eval(read.read("-42")[0]) == eval.Cell(kind: Long, longVal: -42)
   check eval.eval(read.read("-42.0")[0]) == eval.Cell(kind: Double, doubleVal: -42.0)
+  check eval.eval(read.read("(long 1.5)")[0]) == eval.Cell(kind: Long, longVal: 1)
+  check eval.eval(read.read("(double 1)")[0]) == eval.Cell(kind: Double, doubleVal: 1.0)
 
 test "boolean and nil":
   check eval.eval(read.read("true")[0]) == eval.Cell(kind: Boolean, booleanVal: true)

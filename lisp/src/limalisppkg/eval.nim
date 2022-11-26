@@ -631,6 +631,28 @@ func boolean*(ctx: Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Boolean, booleanVal: true)
 
+func long*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  case cell.kind:
+  of Long:
+    cell
+  of Double:
+    Cell(kind: Long, longVal: cell.doubleVal.int64)
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
+func double*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0]
+  case cell.kind:
+  of Double:
+    cell
+  of Long:
+    Cell(kind: Double, doubleVal: cell.longVal.float64)
+  else:
+    Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+
 func initContext*(): Context =
   result.printLimit = printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
@@ -663,6 +685,8 @@ func initContext*(): Context =
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
   result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
   result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
+  result.vars["long"] = Cell(kind: Fn, fnVal: long, fnStringVal: "long")
+  result.vars["double"] = Cell(kind: Fn, fnVal: double, fnStringVal: "double")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
