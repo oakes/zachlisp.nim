@@ -214,7 +214,37 @@ test "name":
   check eval.eval(read.read("(name \"hi\")")[0]) == eval.Cell(kind: String, stringVal: "hi")
   check eval.eval(read.read("(name :hi)")[0]) == eval.Cell(kind: String, stringVal: "hi")
 
+test "conj":
+  check eval.eval(read.read("(conj () 1 2 3)")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 3),
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Long, longVal: 1),
+  ])
+  check eval.eval(read.read("(conj [1 \"hi\" :wassup] 2)")[0]) == eval.Cell(kind: Vector, vectorVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+    eval.Cell(kind: Long, longVal: 2),
+  ])
+  check eval.eval(read.read("(conj {:foo 1 :bar \"hi\"} [:baz 2])")[0]) == eval.Cell(kind: Map, mapVal: {
+    eval.Cell(kind: Keyword, keywordVal: ":foo"): eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Keyword, keywordVal: ":bar"): eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":baz"): eval.Cell(kind: Long, longVal: 2),
+  }.toTable)
+  check eval.eval(read.read("(conj #{:foo 1 :bar 1} 2)")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Long, longVal: 2),
+  ].toHashSet)
+  check eval.eval(read.read("(conj :yo 2)")[0]) == eval.Cell(kind: Error, error: InvalidType)
+
 test "cons":
+  check eval.eval(read.read("(cons 1 2 3 ())")[0]) == eval.Cell(kind: List, listVal: @[
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: Long, longVal: 2),
+    eval.Cell(kind: Long, longVal: 3),
+  ])
   check eval.eval(read.read("(cons 2 [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: List, listVal: @[
     eval.Cell(kind: Long, longVal: 2),
     eval.Cell(kind: Long, longVal: 1),

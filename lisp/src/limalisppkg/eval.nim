@@ -369,16 +369,16 @@ template getContents(cell: Cell): untyped =
 
 func vec*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
-  checkKind(args, {List, Vector, Map, Set})
-  Cell(kind: Vector, vectorVal: getContents(args[0]))
+  let cell = args[0]
+  checkKind(cell, {List, Vector, Map, Set})
+  Cell(kind: Vector, vectorVal: getContents(cell))
 
 func nth*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
-  checkKind(args[0], {List, Vector, Map, Set})
+  let cell = args[0]
+  checkKind(cell, {List, Vector, Map, Set})
   checkKind(args[1], {Long})
-  let
-    cell = args[0]
-    index = args[1].longVal
+  let index = args[1].longVal
   case cell.kind:
   of List:
     if cell.listVal.len > index:
@@ -413,8 +413,8 @@ func nth*(ctx: Context, args: seq[Cell]): Cell =
 
 func count*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
-  checkKind(args[0], {List, Vector, Map, Set})
   let cell = args[0]
+  checkKind(cell, {List, Vector, Map, Set})
   case cell.kind:
   of List:
     Cell(kind: Long, longVal: cell.listVal.len)
@@ -527,8 +527,8 @@ func str*(ctx: Context, args: seq[Cell]): Cell =
 
 func name*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1, 1)
-  checkKind(args[0], {String, Keyword}) # TODO: support symbols
   let cell = args[0]
+  checkKind(cell, {String, Keyword}) # TODO: support symbols
   case cell.kind:
   of String:
     cell
@@ -537,10 +537,39 @@ func name*(ctx: Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
 
+func conj(cell: Cell, contents: seq[Cell]): Cell =
+  var res = cell
+  case cell.kind:
+  of List:
+    for arg in contents:
+      res.listVal = @[arg] & res.listVal
+  of Vector:
+    res.vectorVal &= contents
+  of Map:
+    for arg in contents:
+      if arg.kind == Vector and arg.vectorVal.len == 2:
+        let
+          k = arg.vectorVal[0]
+          v = arg.vectorVal[1]
+        res.mapVal[k] = v
+  of Set:
+    for arg in contents:
+      res.setVal.incl(arg)
+  else:
+    return Cell(kind: Error, error: InvalidType, readCell: cell.readCell)
+  res
+
+func conj*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 2)
+  let cell = args[0]
+  checkKind(cell, {List, Vector, Map, Set})
+  conj(cell, args[1 ..< args.len])
+
 func cons*(ctx: Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 2)
-  checkKind(args[1], {List, Vector, Map, Set})
-  Cell(kind: List, listVal: @[args[0]] & getContents(args[1]))
+  checkCount(args.len, 2)
+  let lastCell = args[args.len-1]
+  checkKind(lastCell, {List, Vector, Map, Set})
+  Cell(kind: List, listVal: args[0 ..< args.len-1] & getContents(lastCell))
 
 func initContext*(): Context =
   result.printLimit = printLimit
@@ -570,6 +599,7 @@ func initContext*(): Context =
   result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
   result.vars["str"] = Cell(kind: Fn, fnVal: str, fnStringVal: "str")
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
+  result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
 
 func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
