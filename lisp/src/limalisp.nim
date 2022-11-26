@@ -5,4 +5,8 @@ when isMainModule:
   while true:
     stdout.write "=> "
     for cell in read.read(stdin.readLine):
-      echo eval.eval(cell)
+      let ret = eval.print(eval.eval(cell))
+      if ret.kind == eval.String:
+        echo ret.stringVal
+      else:
+        echo ret

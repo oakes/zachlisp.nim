@@ -866,3 +866,7 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
 func eval*(cell: read.Cell): Cell =
   var ctx = initContext()
   eval(ctx, cell)
+
+func print*(cell: Cell): Cell =
+  var ctx = initContext()
+  print(ctx, @[cell])
