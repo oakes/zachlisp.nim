@@ -185,6 +185,27 @@ test "vec":
   ])
   check eval.eval(read.read("(vec nil)")[0]) == eval.Cell(kind: Vector, vectorVal: @[])
 
+test "set":
+  check eval.eval(read.read("(set [1 \"hi\" :wassup])")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Long, longVal: 1),
+    eval.Cell(kind: String, stringVal: "hi"),
+    eval.Cell(kind: Keyword, keywordVal: ":wassup"),
+  ].toHashSet)
+  check eval.eval(read.read("(set {:foo 1 :bar \"hi\"})")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":bar"), eval.Cell(kind: String, stringVal: "hi"),
+    ]),
+    eval.Cell(kind: Vector, vectorVal: @[
+      eval.Cell(kind: Keyword, keywordVal: ":foo"), eval.Cell(kind: Long, longVal: 1),
+    ]),
+  ].toHashSet)
+  check eval.eval(read.read("(set #{:foo 1 :bar 1})")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+    eval.Cell(kind: Long, longVal: 1),
+  ].toHashSet)
+  check eval.eval(read.read("(set nil)")[0]) == eval.Cell(kind: Set)
+
 test "nth":
   check eval.eval(read.read("(nth [1 \"hi\" :wassup] 1)")[0]) == eval.Cell(kind: String, stringVal: "hi")
   check eval.eval(read.read("(nth {:foo 1 :bar \"hi\"} 1)")[0]) == eval.Cell(kind: Vector, vectorVal: @[

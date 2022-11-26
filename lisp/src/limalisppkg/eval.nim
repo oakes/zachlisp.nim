@@ -388,6 +388,15 @@ func vec*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(cell, {List, Vector, Map, Set})
   Cell(kind: Vector, vectorVal: toSeq(cell))
 
+func set*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 1, 1)
+  let cell = args[0].nilPun
+  checkKind(cell, {List, Vector, Map, Set})
+  if cell.kind == Set:
+    cell
+  else:
+    Cell(kind: Set, setVal: toSeq(cell).toHashSet)
+
 func nth*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 2, 2)
   let cell = args[0].nilPun
@@ -755,6 +764,7 @@ func initContext*(): Context =
   result.vars["inc"] = Cell(kind: Fn, fnVal: inc, fnStringVal: "inc")
   result.vars["dec"] = Cell(kind: Fn, fnVal: dec, fnStringVal: "dec")
   result.vars["vec"] = Cell(kind: Fn, fnVal: vec, fnStringVal: "vec")
+  result.vars["set"] = Cell(kind: Fn, fnVal: set, fnStringVal: "set")
   result.vars["nth"] = Cell(kind: Fn, fnVal: nth, fnStringVal: "nth")
   result.vars["count"] = Cell(kind: Fn, fnVal: count, fnStringVal: "count")
   result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
