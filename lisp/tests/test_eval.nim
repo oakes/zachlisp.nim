@@ -317,6 +317,12 @@ test "cons":
   ])
   check eval.eval(read.read("(cons 2 :yo)")[0]) == eval.Cell(kind: Error, error: InvalidType)
 
+test "disj":
+  check eval.eval(read.read("(disj #{:foo 1 :bar 1} 1)")[0]) == eval.Cell(kind: Set, setVal: [
+    eval.Cell(kind: Keyword, keywordVal: ":bar"),
+    eval.Cell(kind: Keyword, keywordVal: ":foo"),
+  ].toHashSet)
+
 test "list":
   check eval.eval(read.read("(list 1 :a \"hi\")")[0]) == eval.Cell(kind: List, listVal: @[
     eval.Cell(kind: Long, longVal: 1),

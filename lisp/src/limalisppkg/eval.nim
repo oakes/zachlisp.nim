@@ -615,6 +615,15 @@ func cons*(ctx: Context, args: seq[Cell]): Cell =
   checkKind(lastCell, {List, Vector, Map, Set})
   Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
 
+func disj*(ctx: Context, args: seq[Cell]): Cell =
+  checkCount(args.len, 2, 2)
+  var cell = args[0]
+  if args[0].kind == Nil: # nil pun
+    cell = Cell(kind: Set)
+  checkKind(cell, {Set})
+  cell.setVal.excl(args[1])
+  cell
+
 func list*(ctx: Context, args: seq[Cell]): Cell =
   Cell(kind: List, listVal: args)
 
@@ -724,11 +733,9 @@ func concat*(ctx: Context, args: seq[Cell]): Cell =
 
 func assoc*(ctx: Context, args: seq[Cell]): Cell =
   checkCount(args.len, 1)
-  var cell =
-    if args[0].kind == Nil:
-      Cell(kind: Map)
-    else:
-      args[0]
+  var cell = args[0]
+  if args[0].kind == Nil: # nil pun
+    cell = Cell(kind: Map)
   checkKind(cell, {List, Vector, Map})
   let cells = args[1 ..< args.len]
   if cells.len mod 2 != 0:
@@ -801,6 +808,7 @@ func initContext*(): Context =
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
+  result.vars["disj"] = Cell(kind: Fn, fnVal: disj, fnStringVal: "disj")
   result.vars["list"] = Cell(kind: Fn, fnVal: list, fnStringVal: "list")
   result.vars["vector"] = Cell(kind: Fn, fnVal: vector, fnStringVal: "vector")
   result.vars["hash-map"] = Cell(kind: Fn, fnVal: hashMap, fnStringVal: "hash-map")
