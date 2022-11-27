@@ -217,3 +217,20 @@ func `<`*(a, b: Cell): bool =
 
 func `<=`*(a, b: Cell): bool =
   a < b or a == b
+
+template checkKind*(cell: Cell, kinds: set[CellKind]) =
+  if cell.kind notin kinds:
+    return Cell(kind: Error, error: InvalidType, token: cell.token)
+
+template checkKind*(cells: seq[Cell], kinds: set[CellKind]) =
+  for cell in cells:
+    checkKind(cell, kinds)
+
+template checkCount*(count: int, min: int) =
+  if count < min:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)
+
+template checkCount*(count: int, min: int, max: int) =
+  checkCount(count, min)
+  if count > max:
+    return Cell(kind: Error, error: InvalidNumberOfArguments)

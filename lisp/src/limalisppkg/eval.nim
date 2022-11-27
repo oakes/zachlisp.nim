@@ -1,4 +1,5 @@
 from ./types import Cell, CellKind, ErrorKind, `==`, `<`, `<=`
+from ./print import nil
 import tables, sets, unicode
 from parseutils import nil
 from sequtils import nil
@@ -11,7 +12,6 @@ const
     "{": Map,
     "#{": Set,
   }.toTable
-  printLimit = 10000
 
 func isAllLongs(args: seq[Cell]): bool =
   for arg in args:
@@ -27,23 +27,6 @@ template toDouble(cell: Cell) =
     cell.doubleVal
   else:
     return Cell(kind: Error, error: InvalidType, token: cell.token)
-
-template checkKind(cell: Cell, kinds: set[CellKind]) =
-  if cell.kind notin kinds:
-    return Cell(kind: Error, error: InvalidType, token: cell.token)
-
-template checkKind(cells: seq[Cell], kinds: set[CellKind]) =
-  for cell in cells:
-    checkKind(cell, kinds)
-
-template checkCount(count: int, min: int) =
-  if count < min:
-    return Cell(kind: Error, error: InvalidNumberOfArguments)
-
-template checkCount(count: int, min: int, max: int) =
-  checkCount(count, min)
-  if count > max:
-    return Cell(kind: Error, error: InvalidNumberOfArguments)
 
 template evalCells(ctx: types.Context, readCells: seq[types.ReadCell]): seq[Cell] =
   var cells: seq[Cell]
@@ -91,36 +74,36 @@ func eq*(ctx: types.Context, args: seq[Cell]): Cell =
   Cell(kind: Boolean, booleanVal: true)
 
 func ge*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] < args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func gt*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] <= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func le*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] > args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func lt*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] >= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
 func min*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1)
+  types.checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
     if arg < res:
@@ -128,8 +111,8 @@ func min*(ctx: types.Context, args: seq[Cell]): Cell =
   res
 
 func max*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1)
+  types.checkKind(args, {Long, Double})
   var res = args[0]
   for arg in args[1 ..< args.len]:
     if arg > res:
@@ -137,7 +120,7 @@ func max*(ctx: types.Context, args: seq[Cell]): Cell =
   res
 
 func plus*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 0
     for arg in args:
@@ -150,8 +133,8 @@ func plus*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func minus*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1)
+  types.checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = args[0].longVal
     for arg in args[1 ..< args.len]:
@@ -164,7 +147,7 @@ func minus*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func times*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkKind(args, {Long, Double})
+  types.checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 1
     for arg in args:
@@ -177,55 +160,55 @@ func times*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: res)
 
 func divide*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1)
+  types.checkKind(args, {Long, Double})
   var res: float64 = args[0].toDouble
   for arg in args[1 ..< args.len]:
     res /= arg.toDouble
   Cell(kind: Double, doubleVal: res)
 
 func isNaN*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  checkKind(cell, {Long, Double})
+  types.checkKind(cell, {Long, Double})
   if cell.kind == Double:
     Cell(kind: Boolean, booleanVal: math.isNaN(cell.doubleVal))
   else:
     Cell(kind: Boolean, booleanVal: false)
 
 func `mod`*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 2)
-  checkKind(args, {Long})
+  types.checkCount(args.len, 2, 2)
+  types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal mod args[1].longVal)
 
 func pow*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 2)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 2, 2)
+  types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.pow(args[0].toDouble, args[1].toDouble))
 
 func exp*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.exp(args[0].toDouble))
 
 func floor*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.floor(args[0].toDouble))
 
 func ceil*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.ceil(args[0].toDouble))
 
 func sqrt*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.sqrt(args[0].toDouble))
 
 func abs*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   let arg = args[0]
   if arg.kind == Long:
     Cell(kind: Long, longVal: abs(arg.longVal))
@@ -233,8 +216,8 @@ func abs*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Double, doubleVal: abs(arg.toDouble))
 
 func signum*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long, Double})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long, Double})
   let arg = args[0]
   if arg.kind == Long:
     Cell(kind: Long, longVal: math.sgn(arg.longVal))
@@ -242,35 +225,35 @@ func signum*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Long, longVal: math.sgn(arg.toDouble))
 
 func inc*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal + 1)
 
 func dec*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  checkKind(args, {Long})
+  types.checkCount(args.len, 1, 1)
+  types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
 func vec*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, Map, Set})
   Cell(kind: Vector, vectorVal: toSeq(cell))
 
 func set*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, Map, Set})
   if cell.kind == Set:
     cell
   else:
     Cell(kind: Set, setVal: toSeq(cell).toHashSet)
 
 func nth*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 2)
+  types.checkCount(args.len, 2, 2)
   let cell = args[0].nilPun
-  checkKind(cell, {List, Vector, Map, Set})
-  checkKind(args[1], {Long})
+  types.checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(args[1], {Long})
   let index = args[1].longVal
   case cell.kind:
   of List:
@@ -305,9 +288,9 @@ func nth*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
 func count*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, Map, Set})
   case cell.kind:
   of List:
     Cell(kind: Long, longVal: cell.listVal.len)
@@ -320,117 +303,10 @@ func count*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func print(cell: Cell, shouldEscape: bool, limit: var int): Cell
-
-template printCell(cell: Cell, limit: var int): untyped =
-  let printedCell = print(cell, true, limit)
-  if printedCell.kind == Error:
-    return printedCell
-  printedCell.stringVal
-
-template printCells(cells: seq[Cell], limit: var int): untyped =
-  var baseCell = Cell(kind: String, stringVal: "")
-  var i = 0
-  for cell in cells:
-    baseCell.stringVal &= printCell(cell, limit)
-    if i + 1 < cells.len:
-      baseCell.stringVal &= " "
-    i += 1
-  baseCell.stringVal
-
-template printCells(cells: Table[Cell, Cell], limit: var int): untyped =
-  var baseCell = Cell(kind: String, stringVal: "")
-  var i = 0
-  for (k, v) in cells.pairs:
-    baseCell.stringVal &= printCell(k, limit) & " " & printCell(v, limit)
-    if i + 1 < cells.len:
-      baseCell.stringVal &= " "
-    i += 1
-  baseCell.stringVal
-
-template printCells(cells: HashSet[Cell], limit: var int): untyped =
-  var baseCell = Cell(kind: String, stringVal: "")
-  var i = 0
-  for cell in cells:
-    baseCell.stringVal &= printCell(cell, limit)
-    if i + 1 < cells.len:
-      baseCell.stringVal &= " "
-    i += 1
-  baseCell.stringVal
-
-template toString[T](val: T, limit: var int): Cell =
-  let s = $val
-  limit -= s.len
-  if limit < 0:
-    Cell(kind: Error, error: PrintLengthLimitExceeded)
-  else:
-    Cell(kind: String, stringVal: s)
-
-func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
-  case cell.kind:
-  of Error:
-    cell
-  of Nil:
-    if shouldEscape:
-      "nil".toString(limit)
-    else:
-      "".toString(limit)
-  of Boolean:
-    cell.booleanVal.toString(limit)
-  of Long:
-    cell.longVal.toString(limit)
-  of Double:
-    cell.doubleVal.toString(limit)
-  of Character:
-    ($cell.characterVal).toString(limit)
-  of Symbol:
-    cell.symbolVal.toString(limit)
-  of String:
-    if shouldEscape:
-      var s = ""
-      for ch in cell.stringVal:
-        addEscapedChar(s, ch)
-      s = "\"" & s & "\""
-      s.toString(limit)
-    else:
-      cell.stringVal.toString(limit)
-  of Keyword:
-    cell.keywordVal.toString(limit)
-  of Fn:
-    cell.fnStringVal.toString(limit)
-  of List:
-    limit -= 2
-    Cell(kind: String, stringVal: "(" & printCells(cell.listVal, limit) & ")")
-  of Vector:
-    limit -= 2
-    Cell(kind: String, stringVal: "[" & printCells(cell.vectorVal, limit) & "]")
-  of Map:
-    limit -= 2
-    Cell(kind: String, stringVal: "{" & printCells(cell.mapVal, limit) & "}")
-  of Set:
-    limit -= 3
-    Cell(kind: String, stringVal: "#{" & printCells(cell.setVal, limit) & "}")
-
-func print*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
-  var limit = ctx.printLimit
-  print(args[0], true, limit)
-
-func str*(ctx: types.Context, args: seq[Cell]): Cell =
-  var
-    limit = ctx.printLimit
-    retCell = Cell(kind: String, stringVal: "")
-  for cell in args:
-    let printedCell = print(cell, false, limit)
-    if printedCell.kind == Error:
-      return printedCell
-    retCell.stringVal &= printedCell.stringVal
-  retCell
-
 func name*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  checkKind(cell, {String, Keyword}) # TODO: support symbols
+  types.checkKind(cell, {String, Keyword}) # TODO: support symbols
   case cell.kind:
   of String:
     cell
@@ -462,23 +338,23 @@ func conj(cell: Cell, contents: seq[Cell]): Cell =
   res
 
 func conj*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2)
+  types.checkCount(args.len, 2)
   let cell = args[0].nilPun
-  checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, Map, Set})
   conj(cell, args[1 ..< args.len])
 
 func cons*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2)
+  types.checkCount(args.len, 2)
   let lastCell = args[args.len-1].nilPun
-  checkKind(lastCell, {List, Vector, Map, Set})
+  types.checkKind(lastCell, {List, Vector, Map, Set})
   Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
 
 func disj*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 2)
+  types.checkCount(args.len, 2, 2)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
     cell = Cell(kind: Set)
-  checkKind(cell, {Set})
+  types.checkKind(cell, {Set})
   cell.setVal.excl(args[1])
   cell
 
@@ -500,7 +376,7 @@ func hashSet*(ctx: types.Context, args: seq[Cell]): Cell =
   Cell(kind: Set, setVal: args.toHashSet)
 
 func get*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 2, 3)
+  types.checkCount(args.len, 2, 3)
   let
     cell = args[0].nilPun
     key = args[1]
@@ -509,7 +385,7 @@ func get*(ctx: types.Context, args: seq[Cell]): Cell =
         args[2]
       else:
         Cell(kind: Nil)
-  checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, Map, Set})
   case cell.kind:
   of List:
     if key.kind == Long and cell.listVal.len > key.longVal:
@@ -535,7 +411,7 @@ func get*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
 func boolean*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
   of Boolean:
@@ -546,7 +422,7 @@ func boolean*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Boolean, booleanVal: true)
 
 func long*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
   of Long:
@@ -557,7 +433,7 @@ func long*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
 func double*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
   of Double:
@@ -568,8 +444,8 @@ func double*(ctx: types.Context, args: seq[Cell]): Cell =
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
 func concat*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
-  checkKind(args, {List, Vector, Map, Set, Nil})
+  types.checkCount(args.len, 1)
+  types.checkKind(args, {List, Vector, Map, Set, Nil})
   var ret = Cell(kind: Nil)
   for cell in args:
     case ret.kind:
@@ -590,11 +466,11 @@ func concat*(ctx: types.Context, args: seq[Cell]): Cell =
   ret
 
 func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1)
+  types.checkCount(args.len, 1)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
     cell = Cell(kind: Map)
-  checkKind(cell, {List, Vector, Map})
+  types.checkKind(cell, {List, Vector, Map})
   let cells = args[1 ..< args.len]
   if cells.len mod 2 != 0:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
@@ -622,19 +498,19 @@ func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
   cell
 
 func keys*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  checkKind(cell, {Map})
+  types.checkKind(cell, {Map})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.keys))
 
 func values*(ctx: types.Context, args: seq[Cell]): Cell =
-  checkCount(args.len, 1, 1)
+  types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  checkKind(cell, {Map})
+  types.checkKind(cell, {Map})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values))
 
 func initContext*(): types.Context =
-  result.printLimit = printLimit
+  result.printLimit = print.printLimit
   result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
   result.vars[">"] = Cell(kind: Fn, fnVal: gt, fnStringVal: ">")
   result.vars[">="] = Cell(kind: Fn, fnVal: ge, fnStringVal: ">=")
@@ -661,8 +537,8 @@ func initContext*(): types.Context =
   result.vars["set"] = Cell(kind: Fn, fnVal: set, fnStringVal: "set")
   result.vars["nth"] = Cell(kind: Fn, fnVal: nth, fnStringVal: "nth")
   result.vars["count"] = Cell(kind: Fn, fnVal: count, fnStringVal: "count")
-  result.vars["print"] = Cell(kind: Fn, fnVal: print, fnStringVal: "print")
-  result.vars["str"] = Cell(kind: Fn, fnVal: str, fnStringVal: "str")
+  result.vars["print"] = Cell(kind: Fn, fnVal: print.print, fnStringVal: "print")
+  result.vars["str"] = Cell(kind: Fn, fnVal: print.str, fnStringVal: "str")
   result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
   result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
   result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
@@ -761,7 +637,3 @@ func eval*(ctx: types.Context, cell: types.ReadCell): Cell =
 func eval*(cell: types.ReadCell): Cell =
   var ctx = initContext()
   eval(ctx, cell)
-
-func print*(cell: Cell): Cell =
-  var ctx = initContext()
-  print(ctx, @[cell])
