@@ -29,6 +29,7 @@ const
     "true": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: true), token: Token(value: "true")),
     "false": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: false), token: Token(value: "false")),
     "nil": ReadCell(kind: Value, value: Cell(kind: Nil), token: Token(value: "nil")),
+    "##NaN": ReadCell(kind: Value, value: Cell(kind: Double, doubleVal: NaN), token: Token(value: "##NaN")),
   }.toTable
 
 func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[ReadCell] =
@@ -226,9 +227,11 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
           return @[res]
         elif nextCell.error == None:
           if cell.token.value == "##":
-            case nextCell.token.value:
-            of "NaN":
-              return @[ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: "##NaN", position: cell.token.position))]
+            let combinedValue = cell.token.value & nextCell.token.value
+            if combinedValue in specialSyms:
+              var res = specialSyms[combinedValue]
+              res.token.position = cell.token.position
+              return @[res]
             else:
               return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
           else:
@@ -244,7 +247,9 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
     case cell.value.kind:
     of Symbol:
       if cell.token.value in specialSyms:
-        @[specialSyms[cell.token.value]]
+        var res = specialSyms[cell.token.value]
+        res.token.position = cell.token.position
+        @[res]
       else:
         @[cell]
     of Keyword:

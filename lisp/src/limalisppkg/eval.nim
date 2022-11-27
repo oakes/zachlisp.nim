@@ -554,7 +554,6 @@ func initContext*(): types.Context =
   result.vars["assoc"] = Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc")
   result.vars["keys"] = Cell(kind: Fn, fnVal: keys, fnStringVal: "keys")
   result.vars["values"] = Cell(kind: Fn, fnVal: values, fnStringVal: "values")
-  result.vars["##NaN"] = Cell(kind: Double, doubleVal: NaN)
 
 func invoke*(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
