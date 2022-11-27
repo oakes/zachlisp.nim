@@ -562,57 +562,57 @@ func invoke*(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: NotAFunction, token: fn.token)
 
-func eval*(ctx: types.Context, cell: types.ReadCell): Cell =
-  if cell.error != types.None:
-    return Cell(kind: Error, error: InvalidToken, token: cell.token)
-  case cell.kind:
+func eval*(ctx: types.Context, readCell: types.ReadCell): Cell =
+  if readCell.error != types.None:
+    return Cell(kind: Error, error: InvalidToken, token: readCell.token)
+  case readCell.kind:
   of types.Collection:
-    let delim = cell.delims[0].token.value
+    let delim = readCell.delims[0].token.value
     let typ = delimToType[delim]
     case typ:
     of List:
-      let cells = evalCells(ctx, cell.contents)
+      let cells = evalCells(ctx, readCell.contents)
       if cells.len > 0:
         var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
         # set the token if it hasn't been set already
         if res.token.value == "":
-          res.token = cell.token
+          res.token = readCell.token
         res
       else:
-        Cell(kind: List, listVal: @[], token: cell.token)
+        Cell(kind: List, listVal: @[], token: readCell.token)
     of Vector:
-      Cell(kind: Vector, vectorVal: evalCells(ctx, cell.contents))
+      Cell(kind: Vector, vectorVal: evalCells(ctx, readCell.contents))
     of Map:
-      if cell.contents.len mod 2 != 0:
-        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: cell.token)
-      let cells = evalCells(ctx, cell.contents)
+      if readCell.contents.len mod 2 != 0:
+        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: readCell.token)
+      let cells = evalCells(ctx, readCell.contents)
       var t: Table[Cell, Cell]
       for i in 0 ..< int(cells.len / 2):
         t[cells[i*2]] = cells[i*2+1]
       Cell(kind: Map, mapVal: t)
     of Set:
       var hs: HashSet[Cell]
-      for cell in evalCells(ctx, cell.contents):
+      for cell in evalCells(ctx, readCell.contents):
         hs.incl(cell)
       Cell(kind: Set, setVal: hs)
     else:
-      Cell(kind: Error, error: NotImplemented, token: cell.token)
+      Cell(kind: Error, error: NotImplemented, token: readCell.token)
   of types.Value:
-    case cell.value.kind:
+    case readCell.value.kind:
     of types.Symbol:
-      if cell.token.value in ctx.vars:
-        var ret = ctx.vars[cell.token.value]
-        ret.token = cell.token
+      if readCell.token.value in ctx.vars:
+        var ret = ctx.vars[readCell.token.value]
+        ret.token = readCell.token
         ret
       else:
-        Cell(kind: Error, error: VarDoesNotExist, token: cell.token)
+        Cell(kind: Error, error: VarDoesNotExist, token: readCell.token)
     else:
-      var ret = cell.value
-      ret.token = cell.token
+      var ret = readCell.value
+      ret.token = readCell.token
       ret
   else:
-    Cell(kind: Error, error: NotImplemented, token: cell.token)
+    Cell(kind: Error, error: NotImplemented, token: readCell.token)
 
-func eval*(cell: types.ReadCell): Cell =
+func eval*(readCell: types.ReadCell): Cell =
   var ctx = initContext()
-  eval(ctx, cell)
+  eval(ctx, readCell)
