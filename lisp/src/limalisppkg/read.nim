@@ -264,21 +264,23 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
       @[res]
     of Long:
       var res = cell
-      try:
-        var n: int
-        discard parseutils.parseInt(cell.token.value, n)
-        res.value.longVal = n.int64
-      except ValueError:
-        res.error = InvalidNumber
+      if res.error == None:
+        try:
+          var n: int
+          discard parseutils.parseInt(cell.token.value, n)
+          res.value.longVal = n.int64
+        except ValueError:
+          res.error = InvalidNumber
       @[res]
     of Double:
       var res = cell
-      try:
-        var n: float
-        discard parseutils.parseFloat(cell.token.value, n)
-        res.value.doubleVal = n.float64
-      except ValueError:
-        res.error = InvalidNumber
+      if res.error == None:
+        try:
+          var n: float
+          discard parseutils.parseFloat(cell.token.value, n)
+          res.value.doubleVal = n.float64
+        except ValueError:
+          res.error = InvalidNumber
       @[res]
     else:
       @[cell]
