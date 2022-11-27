@@ -56,7 +56,7 @@ type
       mapVal*: Table[Cell, Cell]
     of Set:
       setVal*: HashSet[Cell]
-    readCell*: read.Cell
+    readCell*: read.ReadCell
   Context* = object
     printLimit*: int
     vars*: Table[string, Cell]
@@ -191,7 +191,7 @@ template checkCount(count: int, min: int, max: int) =
   if count > max:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
 
-template evalCells(ctx: Context, readCells: seq[read.Cell]): seq[Cell] =
+template evalCells(ctx: Context, readCells: seq[read.ReadCell]): seq[Cell] =
   var cells: seq[Cell]
   for cell in readCells:
     let res = eval(ctx, cell)
@@ -829,7 +829,7 @@ func invoke*(ctx: Context, fn: Cell, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: NotAFunction, readCell: fn.readCell)
 
-func eval*(ctx: Context, cell: read.Cell): Cell =
+func eval*(ctx: Context, cell: read.ReadCell): Cell =
   if cell.error != read.None:
     return Cell(kind: Error, error: InvalidToken, readCell: cell)
   case cell.kind:
@@ -907,7 +907,7 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
   else:
     Cell(kind: Error, error: NotImplemented, readCell: cell)
 
-func eval*(cell: read.Cell): Cell =
+func eval*(cell: read.ReadCell): Cell =
   var ctx = initContext()
   eval(ctx, cell)
 

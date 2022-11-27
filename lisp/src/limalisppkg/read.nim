@@ -1,7 +1,7 @@
 import unicode, tables, sets
 
 type
-  CellValueKind* = enum
+  CellKind* = enum
     Symbol,
     Nil,
     Boolean,
@@ -9,13 +9,13 @@ type
     Keyword,
     String,
     Character,
-  CellValue* = object
-    case kind*: CellValueKind
+  Cell* = object
+    case kind*: CellKind
     of String:
       stringValue*: string
     else:
       discard
-  CellKind* = enum
+  ReadCellKind* = enum
     Empty,
     Collection,
     SpecialPair,
@@ -25,7 +25,7 @@ type
     OpenDelimiter,
     CloseDelimiter,
     Value,
-  ErrorKind* = enum
+  ReadErrorKind* = enum
     None,
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
@@ -37,20 +37,20 @@ type
     InvalidKeyword,
     InvalidSpecialLiteral,
   Position = tuple[line: int, column: int]
-  Cell* = object
-    case kind*: CellKind
+  ReadCell* = object
+    case kind*: ReadCellKind
     of Collection:
-      delims*: seq[Cell]
-      contents*: seq[Cell]
+      delims*: seq[ReadCell]
+      contents*: seq[ReadCell]
     of SpecialPair:
-      pair*: seq[Cell]
+      pair*: seq[ReadCell]
     of Value:
-      value*: CellValue
+      value*: Cell
     else:
       discard
     token*: string
     position*: Position
-    error*: ErrorKind
+    error*: ReadErrorKind
 
 const
   openDelims = {'(', '[', '{'}
@@ -72,15 +72,15 @@ const
   backslash = '\\'
   underscore = '_'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
-  emptyCell = Cell(kind: Whitespace, token: "")
-  dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
+  emptyCell = ReadCell(kind: Whitespace, token: "")
+  dispatchCell = ReadCell(kind: SpecialCharacter, token: $hash)
   specialSyms = {
-    "true": Cell(kind: Value, value: CellValue(kind: Boolean), token: "true"),
-    "false": Cell(kind: Value, value: CellValue(kind: Boolean), token: "false"),
-    "nil": Cell(kind: Value, value: CellValue(kind: Nil), token: "nil"),
+    "true": ReadCell(kind: Value, value: Cell(kind: Boolean), token: "true"),
+    "false": ReadCell(kind: Value, value: Cell(kind: Boolean), token: "false"),
+    "nil": ReadCell(kind: Value, value: Cell(kind: Nil), token: "nil"),
   }.toTable
 
-func `==`*(a, b: Cell): bool =
+func `==`*(a, b: ReadCell): bool =
   if a.kind == b.kind:
     case a.kind:
     of Collection:
@@ -92,19 +92,19 @@ func `==`*(a, b: Cell): bool =
   else:
     false
 
-func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
+func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[ReadCell] =
   var
     temp = emptyCell
     escaping = false
     line = 1
     column = 1
 
-  proc flush(res: var seq[Cell]) =
+  proc flush(res: var seq[ReadCell]) =
     if temp != emptyCell and temp.kind notin discardTypes:
       res.add(temp)
     temp = emptyCell
 
-  proc save(res: var seq[Cell], cell: Cell, compatibleTypes: set[CellKind], compatibleValueTypes: set[CellValueKind]) =
+  proc save(res: var seq[ReadCell], cell: ReadCell, compatibleTypes: set[ReadCellKind], compatibleValueTypes: set[CellKind]) =
     if temp.kind in compatibleTypes or (temp.kind == Value and temp.value.kind in compatibleValueTypes):
       temp.token &= cell.token
     else:
@@ -171,55 +171,55 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     if str.len == 1:
       case ch:
       of openDelims:
-        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {}, {})
+        save(result, ReadCell(kind: OpenDelimiter, token: str, position: position), {}, {})
         continue
       of closeDelims:
-        save(result, Cell(kind: CloseDelimiter, token: str, position: position), {}, {})
+        save(result, ReadCell(kind: CloseDelimiter, token: str, position: position), {}, {})
         continue
       of digits:
         if temp.token == "-":
-          temp = Cell(kind: Value, value: CellValue(kind: Number), token: temp.token & str, position: temp.position)
+          temp = ReadCell(kind: Value, value: Cell(kind: Number), token: temp.token & str, position: temp.position)
         else:
-          save(result, Cell(kind: Value, value: CellValue(kind: Number), token: str, position: position), {}, {Number, Symbol})
+          save(result, ReadCell(kind: Value, value: Cell(kind: Number), token: str, position: position), {}, {Number, Symbol})
         continue
       of whitespace:
-        save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace}, {})
+        save(result, ReadCell(kind: Whitespace, token: str, position: position), {Whitespace}, {})
         continue
       of specialCharacters:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {})
+        save(result, ReadCell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {})
         continue
       of hash:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {Symbol})
+        save(result, ReadCell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {Symbol})
         continue
       of semicolon:
-        save(result, Cell(kind: Comment, token: str, position: position), {}, {})
+        save(result, ReadCell(kind: Comment, token: str, position: position), {}, {})
         continue
       of doublequote:
-        save(result, Cell(kind: Value, value: CellValue(kind: String), token: str, position: position), {}, {})
+        save(result, ReadCell(kind: Value, value: Cell(kind: String), token: str, position: position), {}, {})
         continue
       of backslash:
-        save(result, Cell(kind: Value, value: CellValue(kind: Character), token: str, position: position), {}, {})
+        save(result, ReadCell(kind: Value, value: Cell(kind: Character), token: str, position: position), {}, {})
         continue
       of underscore:
         if temp == dispatchCell:
-          temp = Cell(kind: SpecialCharacter, token: temp.token & str, position: position)
+          temp = ReadCell(kind: SpecialCharacter, token: temp.token & str, position: position)
           flush(result)
           continue
       else:
         discard
 
     # all other chars
-    save(result, Cell(kind: Value, value: CellValue(kind: Symbol), token: str, position: position), {}, {Symbol, Number})
+    save(result, ReadCell(kind: Value, value: Cell(kind: Symbol), token: str, position: position), {}, {Symbol, Number})
 
   if temp.kind == Value and temp.value.kind == String:
     temp.error = NoMatchingUnquote
 
   flush(result)
 
-func parse*(cells: seq[Cell], index: var int): seq[Cell]
+func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell]
 
-func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Cell] =
-  var contents: seq[Cell] = @[]
+func parseCollection*(cells: seq[ReadCell], index: var int, delimiter: ReadCell): seq[ReadCell] =
+  var contents: seq[ReadCell] = @[]
   let closeDelim = delimPairs[delimiter.token[0]]
   while index < cells.len:
     let cell = cells[index]
@@ -228,9 +228,9 @@ func parseCollection*(cells: seq[Cell], index: var int, delimiter: Cell): seq[Ce
       if cell.token[0] == closeDelim:
         index += 1
         if delimiter.token[0] == '{' and contents.len mod 2 != 0:
-          return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
+          return @[ReadCell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
         else:
-          return @[Cell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
+          return @[ReadCell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
       else:
         var delim = delimiter
         delim.error = NoMatchingCloseDelimiter
@@ -250,7 +250,7 @@ func name*(s: string): string =
       break
   s[i ..< s.len]
 
-func parse*(cells: seq[Cell], index: var int): seq[Cell] =
+func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
   if index == cells.len:
     return @[]
 
@@ -284,11 +284,11 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
           if cell.token == "##":
             case nextCell.token:
             of "NaN":
-              return @[Cell(kind: Value, value: CellValue(kind: Symbol), token: "##NaN", position: cell.position)]
+              return @[ReadCell(kind: Value, value: Cell(kind: Symbol), token: "##NaN", position: cell.position)]
             else:
-              return @[Cell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
+              return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
           else:
-            return @[Cell(kind: SpecialPair, pair: @[cell, nextCell])]
+            return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell])]
       var res = cell
       res.error = NothingValidAfter
       @[res] & nextCells
@@ -302,7 +302,7 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
       if cell.token in specialSyms:
         @[specialSyms[cell.token]]
       elif cell.token[0] == colon:
-        var res = Cell(kind: Value, value: CellValue(kind: Keyword), token: cell.token)
+        var res = ReadCell(kind: Value, value: Cell(kind: Keyword), token: cell.token)
         if name(res.token).len == 0:
           res.error = InvalidKeyword
         @[res]
@@ -313,10 +313,10 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
   else:
     @[cell]
 
-func parse*(cells: seq[Cell]): seq[Cell] =
+func parse*(cells: seq[ReadCell]): seq[ReadCell] =
   var index = 0
   while index < cells.len:
     result.add(parse(cells, index))
 
-func read*(code: string): seq[Cell] =
+func read*(code: string): seq[ReadCell] =
   code.lex().parse()

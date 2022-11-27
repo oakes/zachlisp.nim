@@ -1,111 +1,111 @@
 import unittest
-from limalisppkg/read import CellValueKind, CellValue, CellKind, ErrorKind, Cell, `==`
+from limalisppkg/read import CellKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, `==`
 
 test "lexing":
   check read.lex("1 1") == @[
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
   ]
   check read.lex("(+ 1 1)") == @[
-    Cell(kind: OpenDelimiter, token: "("),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "+"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: CloseDelimiter, token: ")"),
+    ReadCell(kind: OpenDelimiter, token: "("),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "+"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("[1 2 3]") == @[
-    Cell(kind: OpenDelimiter, token: "["),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
-    Cell(kind: CloseDelimiter, token: "]"),
+    ReadCell(kind: OpenDelimiter, token: "["),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
+    ReadCell(kind: CloseDelimiter, token: "]"),
   ]
   check read.lex("#{1 2 3}") == @[
-    Cell(kind: SpecialCharacter, token: "#"),
-    Cell(kind: OpenDelimiter, token: "{"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
-    Cell(kind: CloseDelimiter, token: "}"),
+    ReadCell(kind: SpecialCharacter, token: "#"),
+    ReadCell(kind: OpenDelimiter, token: "{"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
+    ReadCell(kind: CloseDelimiter, token: "}"),
   ]
   check read.lex("{:age 42}") == @[
-    Cell(kind: OpenDelimiter, token: "{"),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: ":age"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "42"),
-    Cell(kind: CloseDelimiter, token: "}"),
+    ReadCell(kind: OpenDelimiter, token: "{"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: ":age"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "42"),
+    ReadCell(kind: CloseDelimiter, token: "}"),
   ]
   check read.lex("^:callable") == @[
-    Cell(kind: SpecialCharacter, token: "^"),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: ":callable"),
+    ReadCell(kind: SpecialCharacter, token: "^"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: ":callable"),
   ]
   check read.lex("'(1, 2, 3)") == @[
-    Cell(kind: SpecialCharacter, token: "'"),
-    Cell(kind: OpenDelimiter, token: "("),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
-    Cell(kind: CloseDelimiter, token: ")"),
+    ReadCell(kind: SpecialCharacter, token: "'"),
+    ReadCell(kind: OpenDelimiter, token: "("),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
+    ReadCell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("`(println ~message)") == @[
-    Cell(kind: SpecialCharacter, token: "`"),
-    Cell(kind: OpenDelimiter, token: "("),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "println"),
-    Cell(kind: SpecialCharacter, token: "~"),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "message"),
-    Cell(kind: CloseDelimiter, token: ")"),
+    ReadCell(kind: SpecialCharacter, token: "`"),
+    ReadCell(kind: OpenDelimiter, token: "("),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "println"),
+    ReadCell(kind: SpecialCharacter, token: "~"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "message"),
+    ReadCell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("`(println ~@messages)") == @[
-    Cell(kind: SpecialCharacter, token: "`"),
-    Cell(kind: OpenDelimiter, token: "("),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "println"),
-    Cell(kind: SpecialCharacter, token: "~@"),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "messages"),
-    Cell(kind: CloseDelimiter, token: ")"),
+    ReadCell(kind: SpecialCharacter, token: "`"),
+    ReadCell(kind: OpenDelimiter, token: "("),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "println"),
+    ReadCell(kind: SpecialCharacter, token: "~@"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "messages"),
+    ReadCell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("""; hello world
 (+ 1 1)""") == @[
-    Cell(kind: Comment, token: "; hello world"),
-    Cell(kind: OpenDelimiter, token: "("),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "+"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: CloseDelimiter, token: ")"),
+    ReadCell(kind: Comment, token: "; hello world"),
+    ReadCell(kind: OpenDelimiter, token: "("),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "+"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: CloseDelimiter, token: ")"),
   ]
   check read.lex("\"hello\"") == @[
-    Cell(kind: Value, value: CellValue(kind: String, stringValue: "hello"), token: "\"hello\""),
+    ReadCell(kind: Value, value: Cell(kind: String, stringValue: "hello"), token: "\"hello\""),
   ]
   check read.lex("\"hello \\\"world\\\"\"") == @[
-    Cell(kind: Value, value: CellValue(kind: String, stringValue: "hello \\\"world\\\""), token: "\"hello \\\"world\\\"\""),
+    ReadCell(kind: Value, value: Cell(kind: String, stringValue: "hello \\\"world\\\""), token: "\"hello \\\"world\\\"\""),
   ]
   check read.lex("\"hello") == @[
-    Cell(kind: Value, value: CellValue(kind: String), token: "\"hello", error: NoMatchingUnquote),
+    ReadCell(kind: Value, value: Cell(kind: String), token: "\"hello", error: NoMatchingUnquote),
   ]
   check read.lex(":hello123") == @[
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: ":hello123"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: ":hello123"),
   ]
   check read.lex("\\n") == @[
-    Cell(kind: Value, value: CellValue(kind: Character), token: "\\n"),
+    ReadCell(kind: Value, value: Cell(kind: Character), token: "\\n"),
   ]
   check read.lex("\\1") == @[
-    Cell(kind: Value, value: CellValue(kind: Character), token: "\\1"),
+    ReadCell(kind: Value, value: Cell(kind: Character), token: "\\1"),
   ]
   check read.lex("\\;") == @[
-    Cell(kind: Value, value: CellValue(kind: Character), token: "\\;"),
+    ReadCell(kind: Value, value: Cell(kind: Character), token: "\\;"),
   ]
   check read.lex("\\ n") == @[
-    Cell(kind: Value, value: CellValue(kind: Character), token: "\\", error: NothingValidAfter),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "n"),
+    ReadCell(kind: Value, value: Cell(kind: Character), token: "\\", error: NothingValidAfter),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "n"),
   ]
   check read.lex("\\space;hello") == @[
-    Cell(kind: Value, value: CellValue(kind: Character), token: "\\space"),
-    Cell(kind: Comment, token: ";hello"),
+    ReadCell(kind: Value, value: Cell(kind: Character), token: "\\space"),
+    ReadCell(kind: Comment, token: ";hello"),
   ]
   check read.lex("#uuid") == @[
-    Cell(kind: SpecialCharacter, token: "#"),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "uuid"),
+    ReadCell(kind: SpecialCharacter, token: "#"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "uuid"),
   ]
   check read.lex("hello#") == @[
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "hello#"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "hello#"),
   ]
   block:
     let cells = read.lex("""; hello
@@ -121,142 +121,142 @@ test "lexing":
 
 test "parsing":
   check read.parse(read.lex(":")) == @[
-    Cell(kind: Value, value: CellValue(kind: Keyword), token: ":", error: InvalidKeyword),
+    ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":", error: InvalidKeyword),
   ]
   check read.parse(read.lex(":hello")) == @[
-    Cell(kind: Value, value: CellValue(kind: Keyword), token: ":hello"),
+    ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":hello"),
   ]
   check read.parse(read.lex("true false nil")) == @[
-    Cell(kind: Value, value: CellValue(kind: Boolean), token: "true"),
-    Cell(kind: Value, value: CellValue(kind: Boolean), token: "false"),
-    Cell(kind: Value, value: CellValue(kind: Nil), token: "nil"),
+    ReadCell(kind: Value, value: Cell(kind: Boolean), token: "true"),
+    ReadCell(kind: Value, value: Cell(kind: Boolean), token: "false"),
+    ReadCell(kind: Value, value: Cell(kind: Nil), token: "nil"),
   ]
   check read.parse(read.lex("(+ 1 1)")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "("), Cell(kind: CloseDelimiter, token: ")")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "("), ReadCell(kind: CloseDelimiter, token: ")")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Symbol), token: "+"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Symbol), token: "+"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
       ],
     ),
   ]
   check read.parse(read.lex("[1 2 3]")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "["), Cell(kind: CloseDelimiter, token: "]")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "["), ReadCell(kind: CloseDelimiter, token: "]")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
       ],
     ),
   ]
   check read.parse(read.lex("#{1 2 3}")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "#{"), Cell(kind: CloseDelimiter, token: "}")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "#{"), ReadCell(kind: CloseDelimiter, token: "}")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
       ],
     ),
   ]
   check read.parse(read.lex("{:foo 1 :bar 2}")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "{"), Cell(kind: CloseDelimiter, token: "}")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "{"), ReadCell(kind: CloseDelimiter, token: "}")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Keyword), token: ":foo"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Keyword), token: ":bar"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
+        ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":foo"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":bar"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
       ],
     ),
   ]
   check read.parse(read.lex("{:foo 1 :bar}")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "{"), Cell(kind: CloseDelimiter, token: "}")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "{"), ReadCell(kind: CloseDelimiter, token: "}")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Keyword), token: ":foo"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Keyword), token: ":bar"),
+        ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":foo"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Keyword), token: ":bar"),
       ],
       error: MustHaveEvenNumberOfForms,
     ),
   ]
   check read.parse(read.lex("#(+ 1 1)")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "#("), Cell(kind: CloseDelimiter, token: ")")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "#("), ReadCell(kind: CloseDelimiter, token: ")")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Symbol), token: "+"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Symbol), token: "+"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
       ],
       error: InvalidDelimiter,
     ),
   ]
   check read.parse(read.lex("(+ 1 (/ 2 3))")) == @[
-    Cell(
+    ReadCell(
       kind: Collection,
-      delims: @[Cell(kind: OpenDelimiter, token: "("), Cell(kind: CloseDelimiter, token: ")")],
+      delims: @[ReadCell(kind: OpenDelimiter, token: "("), ReadCell(kind: CloseDelimiter, token: ")")],
       contents: @[
-        Cell(kind: Value, value: CellValue(kind: Symbol), token: "+"),
-        Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-        Cell(
+        ReadCell(kind: Value, value: Cell(kind: Symbol), token: "+"),
+        ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+        ReadCell(
           kind: Collection,
-          delims: @[Cell(kind: OpenDelimiter, token: "("), Cell(kind: CloseDelimiter, token: ")")],
+          delims: @[ReadCell(kind: OpenDelimiter, token: "("), ReadCell(kind: CloseDelimiter, token: ")")],
           contents: @[
-            Cell(kind: Value, value: CellValue(kind: Symbol), token: "/"),
-            Cell(kind: Value, value: CellValue(kind: Number), token: "2"),
-            Cell(kind: Value, value: CellValue(kind: Number), token: "3"),
+            ReadCell(kind: Value, value: Cell(kind: Symbol), token: "/"),
+            ReadCell(kind: Value, value: Cell(kind: Number), token: "2"),
+            ReadCell(kind: Value, value: Cell(kind: Number), token: "3"),
           ],
         ),
       ],
     ),
   ]
   check read.parse(read.lex("(1}")) == @[
-    Cell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
-    Cell(kind: CloseDelimiter, token: "}", error: NoMatchingOpenDelimiter),
+    ReadCell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
+    ReadCell(kind: CloseDelimiter, token: "}", error: NoMatchingOpenDelimiter),
   ]
   check read.parse(read.lex("(1")) == @[
-    Cell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
-    Cell(kind: Value, value: CellValue(kind: Number), token: "1"),
+    ReadCell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+    ReadCell(kind: Value, value: Cell(kind: Number), token: "1"),
   ]
   check read.parse(read.lex("`(println ~message)")) == @[
-    Cell(kind: SpecialPair, pair: @[
-      Cell(kind: SpecialCharacter, token: "`"),
-      Cell(
+    ReadCell(kind: SpecialPair, pair: @[
+      ReadCell(kind: SpecialCharacter, token: "`"),
+      ReadCell(
         kind: Collection,
-        delims: @[Cell(kind: OpenDelimiter, token: "("), Cell(kind: CloseDelimiter, token: ")")],
+        delims: @[ReadCell(kind: OpenDelimiter, token: "("), ReadCell(kind: CloseDelimiter, token: ")")],
         contents: @[
-          Cell(kind: Value, value: CellValue(kind: Symbol), token: "println"),
-          Cell(kind: SpecialPair, pair: @[
-            Cell(kind: SpecialCharacter, token: "~"),
-            Cell(kind: Value, value: CellValue(kind: Symbol), token: "message"),
+          ReadCell(kind: Value, value: Cell(kind: Symbol), token: "println"),
+          ReadCell(kind: SpecialPair, pair: @[
+            ReadCell(kind: SpecialCharacter, token: "~"),
+            ReadCell(kind: Value, value: Cell(kind: Symbol), token: "message"),
           ]),
         ]),
     ]),
   ]
   check read.parse(read.lex("`(")) == @[
-    Cell(kind: SpecialCharacter, token: "`", error: NothingValidAfter),
-    Cell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
+    ReadCell(kind: SpecialCharacter, token: "`", error: NothingValidAfter),
+    ReadCell(kind: OpenDelimiter, token: "(", error: NoMatchingCloseDelimiter),
   ]
   check read.parse(read.lex("#mytag hello")) == @[
-    Cell(kind: SpecialPair, pair: @[
-      Cell(kind: SpecialCharacter, token: "#"),
-      Cell(kind: Value, value: CellValue(kind: Symbol), token: "mytag"),
+    ReadCell(kind: SpecialPair, pair: @[
+      ReadCell(kind: SpecialCharacter, token: "#"),
+      ReadCell(kind: Value, value: Cell(kind: Symbol), token: "mytag"),
     ]),
-    Cell(kind: Value, value: CellValue(kind: Symbol), token: "hello"),
+    ReadCell(kind: Value, value: Cell(kind: Symbol), token: "hello"),
   ]
   check read.parse(read.lex("#_hello")) == @[
-    Cell(kind: SpecialPair, pair: @[
-      Cell(kind: SpecialCharacter, token: "#_"),
-      Cell(kind: Value, value: CellValue(kind: Symbol), token: "hello"),
+    ReadCell(kind: SpecialPair, pair: @[
+      ReadCell(kind: SpecialCharacter, token: "#_"),
+      ReadCell(kind: Value, value: Cell(kind: Symbol), token: "hello"),
     ]),
   ]
