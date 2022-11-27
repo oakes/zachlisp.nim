@@ -305,12 +305,14 @@ func count*(ctx: types.Context, args: seq[Cell]): Cell =
 func name*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  types.checkKind(cell, {String, Keyword}) # TODO: support symbols
+  types.checkKind(cell, {String, Keyword, Symbol})
   case cell.kind:
   of String:
     cell
   of Keyword:
     Cell(kind: String, stringVal: types.name(cell.keywordVal))
+  of Symbol:
+    Cell(kind: String, stringVal: cell.symbolVal)
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
