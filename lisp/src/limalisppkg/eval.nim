@@ -535,7 +535,7 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
       s = "\"" & s & "\""
       s.toString(limit)
     else:
-      cell.readCell.stringValue.toString(limit)
+      cell.readCell.value.stringValue.toString(limit)
   of Keyword:
     cell.keywordVal.toString(limit)
   of Fn:
@@ -864,42 +864,46 @@ func eval*(ctx: Context, cell: read.Cell): Cell =
       Cell(kind: Set, setVal: hs)
     else:
       Cell(kind: Error, error: NotImplemented, readCell: cell)
-  of read.Symbol:
-    if cell.token in ctx.vars:
-      var ret = ctx.vars[cell.token]
-      ret.readCell = cell
-      ret
+  of read.Value:
+    case cell.value.kind:
+    of read.Symbol:
+      if cell.token in ctx.vars:
+        var ret = ctx.vars[cell.token]
+        ret.readCell = cell
+        ret
+      else:
+        Cell(kind: Error, error: VarDoesNotExist, readCell: cell)
+    of read.Nil:
+      Cell(kind: Nil)
+    of read.Boolean:
+      Cell(kind: Boolean, booleanVal: cell.token == "true")
+    of read.Number:
+      var periodCount = 0
+      for ch in cell.token:
+        if ch == '.':
+          periodCount += 1
+      if periodCount == 0:
+        var n: int
+        try:
+          parseutils.parseInt(cell.token, n)
+        except ValueError:
+          return Cell(kind: Error, error: NumberParseError, readCell: cell)
+        Cell(kind: Long, longVal: n.int64, readCell: cell)
+      elif periodCount == 1:
+        var n: float
+        try:
+          parseutils.parseFloat(cell.token, n)
+        except ValueError:
+          return Cell(kind: Error, error: NumberParseError, readCell: cell)
+        Cell(kind: Double, doubleVal: n.float64, readCell: cell)
+      else:
+        Cell(kind: Error, error: NumberParseError, readCell: cell)
+    of read.String:
+      Cell(kind: String, stringVal: cell.value.stringValue, readCell: cell)
+    of read.Keyword:
+      Cell(kind: Keyword, keywordVal: cell.token, readCell: cell)
     else:
-      Cell(kind: Error, error: VarDoesNotExist, readCell: cell)
-  of read.Nil:
-    Cell(kind: Nil)
-  of read.Boolean:
-    Cell(kind: Boolean, booleanVal: cell.token == "true")
-  of read.Number:
-    var periodCount = 0
-    for ch in cell.token:
-      if ch == '.':
-        periodCount += 1
-    if periodCount == 0:
-      var n: int
-      try:
-        parseutils.parseInt(cell.token, n)
-      except ValueError:
-        return Cell(kind: Error, error: NumberParseError, readCell: cell)
-      Cell(kind: Long, longVal: n.int64, readCell: cell)
-    elif periodCount == 1:
-      var n: float
-      try:
-        parseutils.parseFloat(cell.token, n)
-      except ValueError:
-        return Cell(kind: Error, error: NumberParseError, readCell: cell)
-      Cell(kind: Double, doubleVal: n.float64, readCell: cell)
-    else:
-      Cell(kind: Error, error: NumberParseError, readCell: cell)
-  of read.String:
-    Cell(kind: String, stringVal: cell.stringValue, readCell: cell)
-  of read.Keyword:
-    Cell(kind: Keyword, keywordVal: cell.token, readCell: cell)
+      Cell(kind: Error, error: NotImplemented, readCell: cell)
   else:
     Cell(kind: Error, error: NotImplemented, readCell: cell)
 

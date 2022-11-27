@@ -1,22 +1,30 @@
 import unicode, tables, sets
 
 type
-  CellKind* = enum
-    Empty,
-    Collection,
-    SpecialPair,
-    Whitespace,
-    OpenDelimiter,
-    CloseDelimiter,
+  CellValueKind* = enum
     Symbol,
     Nil,
     Boolean,
     Number,
     Keyword,
-    SpecialCharacter,
-    Comment,
     String,
     Character,
+  CellValue* = object
+    case kind*: CellValueKind
+    of String:
+      stringValue*: string
+    else:
+      discard
+  CellKind* = enum
+    Empty,
+    Collection,
+    SpecialPair,
+    SpecialCharacter,
+    Whitespace,
+    Comment,
+    OpenDelimiter,
+    CloseDelimiter,
+    Value,
   ErrorKind* = enum
     None,
     NoMatchingOpenDelimiter,
@@ -36,13 +44,12 @@ type
       contents*: seq[Cell]
     of SpecialPair:
       pair*: seq[Cell]
-    of String:
-      stringValue*: string
-      stringToken*: string
-      stringPosition*: Position
+    of Value:
+      value*: CellValue
     else:
-      token*: string
-      position*: Position
+      discard
+    token*: string
+    position*: Position
     error*: ErrorKind
 
 const
@@ -68,9 +75,9 @@ const
   emptyCell = Cell(kind: Whitespace, token: "")
   dispatchCell = Cell(kind: SpecialCharacter, token: $hash)
   specialSyms = {
-    "true": Cell(kind: Boolean, token: "true"),
-    "false": Cell(kind: Boolean, token: "false"),
-    "nil": Cell(kind: Nil, token: "nil"),
+    "true": Cell(kind: Value, value: CellValue(kind: Boolean), token: "true"),
+    "false": Cell(kind: Value, value: CellValue(kind: Boolean), token: "false"),
+    "nil": Cell(kind: Value, value: CellValue(kind: Nil), token: "nil"),
   }.toTable
 
 func `==`*(a, b: Cell): bool =
@@ -80,8 +87,6 @@ func `==`*(a, b: Cell): bool =
       a.delims == b.delims and a.contents == b.contents and a.error == b.error
     of SpecialPair:
       a.pair == b.pair and a.error == b.error
-    of String:
-      a.stringToken == b.stringToken and a.error == b.error
     else:
       a.token == b.token and a.error == b.error
   else:
@@ -99,8 +104,8 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
       res.add(temp)
     temp = emptyCell
 
-  proc save(res: var seq[Cell], cell: Cell, compatibleTypes: set[CellKind]) =
-    if temp.kind in compatibleTypes:
+  proc save(res: var seq[Cell], cell: Cell, compatibleTypes: set[CellKind], compatibleValueTypes: set[CellValueKind]) =
+    if temp.kind in compatibleTypes or (temp.kind == Value and temp.value.kind in compatibleValueTypes):
       temp.token &= cell.token
     else:
       flush(res)
@@ -123,38 +128,42 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
 
     # deal with types that can contain a stream of arbitrary characters
     case temp.kind:
-    of Character:
-      if ch in invalidAfterCharacter or (ch == semicolon and temp.token.len > 1):
-        if temp.token.len == 1:
-          temp.error = NothingValidAfter
-        flush(result)
-      else:
-        temp.token &= str
-        continue
     of Comment:
       if ch != newline:
         temp.token &= str
         continue
-    of String:
-      temp.stringToken &= str
-      if ch == doublequote and not esc:
-        var
-          stresc = false
-          str = ""
-        for r in temp.stringToken[1 ..< temp.stringToken.len-1].runes:
-          let s = $r
-          if stresc:
-            case s:
-            of "\"", "\\":
-              str &= s
+    of Value:
+      case temp.value.kind:
+      of Character:
+        if ch in invalidAfterCharacter or (ch == semicolon and temp.token.len > 1):
+          if temp.token.len == 1:
+            temp.error = NothingValidAfter
+          flush(result)
+        else:
+          temp.token &= str
+          continue
+      of String:
+        temp.token &= str
+        if ch == doublequote and not esc:
+          var
+            stresc = false
+            str = ""
+          for r in temp.token[1 ..< temp.token.len-1].runes:
+            let s = $r
+            if stresc:
+              case s:
+              of "\"", "\\":
+                str &= s
+              else:
+                temp.error = InvalidEscape
             else:
-              temp.error = InvalidEscape
-          else:
-            str &= s
-          stresc = not stresc and s[0] == backslash
-        temp.stringValue = str
-        flush(result)
-      continue
+              str &= s
+            stresc = not stresc and s[0] == backslash
+          temp.value.stringValue = str
+          flush(result)
+        continue
+      else:
+        discard
     else:
       discard
 
@@ -162,34 +171,34 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
     if str.len == 1:
       case ch:
       of openDelims:
-        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {})
+        save(result, Cell(kind: OpenDelimiter, token: str, position: position), {}, {})
         continue
       of closeDelims:
-        save(result, Cell(kind: CloseDelimiter, token: str, position: position), {})
+        save(result, Cell(kind: CloseDelimiter, token: str, position: position), {}, {})
         continue
       of digits:
         if temp.token == "-":
-          temp = Cell(kind: Number, token: temp.token & str, position: temp.position)
+          temp = Cell(kind: Value, value: CellValue(kind: Number), token: temp.token & str, position: temp.position)
         else:
-          save(result, Cell(kind: Number, token: str, position: position), {Number, Symbol})
+          save(result, Cell(kind: Value, value: CellValue(kind: Number), token: str, position: position), {}, {Number, Symbol})
         continue
       of whitespace:
-        save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace})
+        save(result, Cell(kind: Whitespace, token: str, position: position), {Whitespace}, {})
         continue
       of specialCharacters:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {})
         continue
       of hash:
-        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {Symbol, SpecialCharacter})
+        save(result, Cell(kind: SpecialCharacter, token: str, position: position), {SpecialCharacter}, {Symbol})
         continue
       of semicolon:
-        save(result, Cell(kind: Comment, token: str, position: position), {})
+        save(result, Cell(kind: Comment, token: str, position: position), {}, {})
         continue
       of doublequote:
-        save(result, Cell(kind: String, stringToken: str, stringPosition: position), {})
+        save(result, Cell(kind: Value, value: CellValue(kind: String), token: str, position: position), {}, {})
         continue
       of backslash:
-        save(result, Cell(kind: Character, token: str, position: position), {})
+        save(result, Cell(kind: Value, value: CellValue(kind: Character), token: str, position: position), {}, {})
         continue
       of underscore:
         if temp == dispatchCell:
@@ -200,9 +209,9 @@ func lex*(code: string, discardTypes: set[CellKind] = {Whitespace}): seq[Cell] =
         discard
 
     # all other chars
-    save(result, Cell(kind: Symbol, token: str, position: position), {Symbol, Number})
+    save(result, Cell(kind: Value, value: CellValue(kind: Symbol), token: str, position: position), {}, {Symbol, Number})
 
-  if temp.kind == String:
+  if temp.kind == Value and temp.value.kind == String:
     temp.error = NoMatchingUnquote
 
   flush(result)
@@ -255,16 +264,6 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
     var res = cell
     res.error = NoMatchingOpenDelimiter
     @[res]
-  of Symbol:
-    if cell.token in specialSyms:
-      @[specialSyms[cell.token]]
-    elif cell.token[0] == colon:
-      var res = Cell(kind: Keyword, token: cell.token)
-      if name(res.token).len == 0:
-        res.error = InvalidKeyword
-      @[res]
-    else:
-      @[cell]
   of SpecialCharacter:
     if index < cells.len:
       let nextCells = parse(cells, index)
@@ -285,7 +284,7 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
           if cell.token == "##":
             case nextCell.token:
             of "NaN":
-              return @[Cell(kind: Symbol, token: "##NaN", position: cell.position)]
+              return @[Cell(kind: Value, value: CellValue(kind: Symbol), token: "##NaN", position: cell.position)]
             else:
               return @[Cell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
           else:
@@ -297,6 +296,20 @@ func parse*(cells: seq[Cell], index: var int): seq[Cell] =
       var res = cell
       res.error = NothingValidAfter
       @[res]
+  of Value:
+    case cell.value.kind:
+    of Symbol:
+      if cell.token in specialSyms:
+        @[specialSyms[cell.token]]
+      elif cell.token[0] == colon:
+        var res = Cell(kind: Value, value: CellValue(kind: Keyword), token: cell.token)
+        if name(res.token).len == 0:
+          res.error = InvalidKeyword
+        @[res]
+      else:
+        @[cell]
+    else:
+      @[cell]
   else:
     @[cell]
 
