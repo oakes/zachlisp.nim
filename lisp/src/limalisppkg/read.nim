@@ -1,5 +1,6 @@
-import unicode, tables, sets
 from ./types import ReadCell, ReadCellKind, ReadErrorKind, Cell, CellKind, Token, `==`
+import unicode, tables, sets
+from parseutils import nil
 
 const
   openDelims = {'(', '[', '{'}
@@ -25,8 +26,8 @@ const
   emptyCell = ReadCell(kind: Whitespace, token: Token(value: ""))
   dispatchCell = ReadCell(kind: SpecialCharacter, token: Token(value: $hash))
   specialSyms = {
-    "true": ReadCell(kind: Value, value: Cell(kind: Boolean), token: Token(value: "true")),
-    "false": ReadCell(kind: Value, value: Cell(kind: Boolean), token: Token(value: "false")),
+    "true": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: true), token: Token(value: "true")),
+    "false": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: false), token: Token(value: "false")),
     "nil": ReadCell(kind: Value, value: Cell(kind: Nil), token: Token(value: "nil")),
   }.toTable
 
@@ -118,7 +119,7 @@ func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[Rea
         if temp.token.value == "-":
           temp = ReadCell(kind: Value, value: Cell(kind: Long), token: Token(value: temp.token.value & str, position: temp.token.position))
         else:
-          save(result, ReadCell(kind: Value, value: Cell(kind: Long), token: Token(value: str, position: position)), {}, {Long, Double, Symbol})
+          save(result, ReadCell(kind: Value, value: Cell(kind: Long), token: Token(value: str, position: position)), {}, {Long, Double, Symbol, Keyword})
         continue
       of period:
         if temp.kind == Value:
@@ -134,11 +135,14 @@ func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[Rea
       of whitespace:
         save(result, ReadCell(kind: Whitespace, token: Token(value: str, position: position)), {Whitespace}, {})
         continue
+      of colon:
+        save(result, ReadCell(kind: Value, value: Cell(kind: Keyword), token: Token(value: str, position: position)), {}, {Symbol, Keyword})
+        continue
       of specialCharacters:
         save(result, ReadCell(kind: SpecialCharacter, token: Token(value: str, position: position)), {SpecialCharacter}, {})
         continue
       of hash:
-        save(result, ReadCell(kind: SpecialCharacter, token: Token(value: str, position: position)), {SpecialCharacter}, {Symbol})
+        save(result, ReadCell(kind: SpecialCharacter, token: Token(value: str, position: position)), {SpecialCharacter}, {Symbol, Keyword})
         continue
       of semicolon:
         save(result, ReadCell(kind: Comment, token: Token(value: str, position: position)), {}, {})
@@ -158,7 +162,7 @@ func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[Rea
         discard
 
     # all other chars
-    save(result, ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: str, position: position)), {}, {Symbol, Long, Double})
+    save(result, ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: str, position: position)), {}, {Symbol, Keyword, Long, Double})
 
   if temp.kind == Value and temp.value.kind == String:
     temp.error = NoMatchingUnquote
@@ -241,13 +245,36 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
     of Symbol:
       if cell.token.value in specialSyms:
         @[specialSyms[cell.token.value]]
-      elif cell.token.value[0] == colon:
-        var res = ReadCell(kind: Value, value: Cell(kind: Keyword), token: cell.token)
-        if types.name(res.token.value).len == 0:
-          res.error = InvalidKeyword
-        @[res]
       else:
         @[cell]
+    of Keyword:
+      var res = cell
+      res.value.keywordVal = cell.token.value
+      if types.name(cell.token.value).len == 0:
+        res.error = InvalidKeyword
+      @[res]
+    of Boolean:
+      var res = cell
+      res.value.booleanVal = cell.token.value == "true"
+      @[res]
+    of Long:
+      var res = cell
+      try:
+        var n: int
+        discard parseutils.parseInt(cell.token.value, n)
+        res.value.longVal = n.int64
+      except ValueError:
+        res.error = InvalidNumber
+      @[res]
+    of Double:
+      var res = cell
+      try:
+        var n: float
+        discard parseutils.parseFloat(cell.token.value, n)
+        res.value.doubleVal = n.float64
+      except ValueError:
+        res.error = InvalidNumber
+      @[res]
     else:
       @[cell]
   else:

@@ -31,13 +31,13 @@ test "lexing":
   ]
   check read.lex("{:age 42}") == @[
     ReadCell(kind: OpenDelimiter, token: Token(value: "{")),
-    ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: ":age")),
+    ReadCell(kind: Value, value: Cell(kind: Keyword), token: Token(value: ":age")),
     ReadCell(kind: Value, value: Cell(kind: Long), token: Token(value: "42")),
     ReadCell(kind: CloseDelimiter, token: Token(value: "}")),
   ]
   check read.lex("^:callable") == @[
     ReadCell(kind: SpecialCharacter, token: Token(value: "^")),
-    ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: ":callable")),
+    ReadCell(kind: Value, value: Cell(kind: Keyword), token: Token(value: ":callable")),
   ]
   check read.lex("'(1, 2, 3)") == @[
     ReadCell(kind: SpecialCharacter, token: Token(value: "'")),
@@ -82,7 +82,7 @@ test "lexing":
     ReadCell(kind: Value, value: Cell(kind: String), token: Token(value: "\"hello"), error: NoMatchingUnquote),
   ]
   check read.lex(":hello123") == @[
-    ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: ":hello123")),
+    ReadCell(kind: Value, value: Cell(kind: Keyword), token: Token(value: ":hello123")),
   ]
   check read.lex("\\n") == @[
     ReadCell(kind: Value, value: Cell(kind: Character), token: Token(value: "\\n")),

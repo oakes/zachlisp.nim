@@ -57,7 +57,6 @@ type
     NotImplemented,
     InvalidToken,
     VarDoesNotExist,
-    NumberParseError,
     NotAFunction,
     InvalidType,
     InvalidNumberOfArguments,

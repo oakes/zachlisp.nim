@@ -1,7 +1,6 @@
 from ./types import Cell, CellKind, ErrorKind, `==`, `<`, `<=`
 from ./print import nil
 import tables, sets, unicode
-from parseutils import nil
 from sequtils import nil
 from math import nil
 
@@ -607,30 +606,10 @@ func eval*(ctx: types.Context, cell: types.ReadCell): Cell =
         ret
       else:
         Cell(kind: Error, error: VarDoesNotExist, token: cell.token)
-    of types.Nil:
-      Cell(kind: Nil)
-    of types.Boolean:
-      Cell(kind: Boolean, booleanVal: cell.token.value == "true")
-    of types.Long:
-      var n: int
-      try:
-        parseutils.parseInt(cell.token.value, n)
-      except ValueError:
-        return Cell(kind: Error, error: NumberParseError, token: cell.token)
-      Cell(kind: Long, longVal: n.int64, token: cell.token)
-    of types.Double:
-      var n: float
-      try:
-        parseutils.parseFloat(cell.token.value, n)
-      except ValueError:
-        return Cell(kind: Error, error: NumberParseError, token: cell.token)
-      Cell(kind: Double, doubleVal: n.float64, token: cell.token)
-    of types.String:
-      Cell(kind: String, stringVal: cell.value.stringVal, token: cell.token)
-    of types.Keyword:
-      Cell(kind: Keyword, keywordVal: cell.token.value, token: cell.token)
     else:
-      Cell(kind: Error, error: NotImplemented, token: cell.token)
+      var ret = cell.value
+      ret.token = cell.token
+      ret
   else:
     Cell(kind: Error, error: NotImplemented, token: cell.token)
 
