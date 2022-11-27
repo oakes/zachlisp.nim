@@ -575,8 +575,8 @@ func eval*(ctx: types.Context, cell: types.ReadCell): Cell =
       if cells.len > 0:
         var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
         # set the token if it hasn't been set already
-        #if res.token.value == "":
-        #  res.token = cell.token
+        if res.token.value == "":
+          res.token = cell.token
         res
       else:
         Cell(kind: List, listVal: @[], token: cell.token)
