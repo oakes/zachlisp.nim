@@ -165,7 +165,9 @@ test "parsing":
       ],
     ),
   ]
-  check read.parse(read.lex("{:foo 1 :bar 2}")) == @[
+  check read.parse(read.lex("""{:foo 1 :bar 2
+;; this tests to make sure comments aren't counted when checking for even number of forms
+}""")) == @[
     ReadCell(
       kind: Collection,
       delims: @[ReadCell(kind: OpenDelimiter, token: Token(value: "{")), ReadCell(kind: CloseDelimiter, token: Token(value: "}"))],

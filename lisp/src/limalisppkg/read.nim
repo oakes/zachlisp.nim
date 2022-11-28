@@ -203,6 +203,12 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
   index += 1
 
   case cell.kind:
+  of Whitespace, Comment:
+    # ignore these
+    @[]
+  of SpecialPair, Collection:
+    # this should never happen because the lexer doesn't return these types
+    @[cell]
   of OpenDelimiter:
     parseCollection(cells, index, cell)
   of CloseDelimiter:
@@ -284,8 +290,6 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
       @[res]
     else:
       @[cell]
-  else:
-    @[cell]
 
 func parse*(cells: seq[ReadCell]): seq[ReadCell] =
   var index = 0
