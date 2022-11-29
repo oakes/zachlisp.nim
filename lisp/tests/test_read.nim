@@ -117,7 +117,7 @@ test "lexing":
     check cells[2].token.position == (2, 2) # +
     check cells[3].token.position == (2, 4) # 1
     check cells[4].token.position == (2, 6) # 1
-    check cells[5].token.position == (2, 7) # 1
+    check cells[5].token.position == (2, 7) # )
     check cells[6].token.position == (3, 1) # :foo
 
 test "parsing":
