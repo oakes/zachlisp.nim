@@ -1,5 +1,6 @@
-from ./types import Cell, CellKind, ErrorKind, `==`, `<`, `<=`
-import tables, sets, unicode
+import ./types
+import unicode
+import parazoa
 
 const printLimit* = 10000
 
@@ -11,7 +12,7 @@ template printCell(cell: Cell, limit: var int): untyped =
     return printedCell
   printedCell.stringVal
 
-template printCells(cells: seq[Cell], limit: var int): untyped =
+template printCells(cells: Vec[Cell], limit: var int): untyped =
   var baseCell = Cell(kind: String, stringVal: "")
   var i = 0
   for cell in cells:
@@ -21,7 +22,7 @@ template printCells(cells: seq[Cell], limit: var int): untyped =
     i += 1
   baseCell.stringVal
 
-template printCells(cells: Table[Cell, Cell], limit: var int): untyped =
+template printCells(cells: Map[Cell, Cell], limit: var int): untyped =
   var baseCell = Cell(kind: String, stringVal: "")
   var i = 0
   for (k, v) in cells.pairs:
@@ -31,7 +32,7 @@ template printCells(cells: Table[Cell, Cell], limit: var int): untyped =
     i += 1
   baseCell.stringVal
 
-template printCells(cells: HashSet[Cell], limit: var int): untyped =
+template printCells(cells: Set[Cell], limit: var int): untyped =
   var baseCell = Cell(kind: String, stringVal: "")
   var i = 0
   for cell in cells:
@@ -87,10 +88,10 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   of Vector:
     limit -= 2
     Cell(kind: String, stringVal: "[" & printCells(cell.vectorVal, limit) & "]")
-  of Map:
+  of HashMap:
     limit -= 2
     Cell(kind: String, stringVal: "{" & printCells(cell.mapVal, limit) & "}")
-  of Set:
+  of HashSet:
     limit -= 3
     Cell(kind: String, stringVal: "#{" & printCells(cell.setVal, limit) & "}")
 

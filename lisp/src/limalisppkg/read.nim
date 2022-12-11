@@ -1,4 +1,4 @@
-from ./types import ReadCell, ReadCellKind, ReadErrorKind, Cell, CellKind, Token, `==`
+import ./types
 import unicode, tables, sets
 from parseutils import nil
 
@@ -23,28 +23,25 @@ const
   backslash = '\\'
   underscore = '_'
   invalidAfterCharacter = {' ', '\t', '\r', '\n'}
-  emptyCell = ReadCell(kind: Whitespace, token: Token(value: ""))
-  dispatchCell = ReadCell(kind: SpecialCharacter, token: Token(value: $hash))
-  specialSyms = {
-    "true": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: true), token: Token(value: "true")),
-    "false": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: false), token: Token(value: "false")),
-    "nil": ReadCell(kind: Value, value: Cell(kind: Nil), token: Token(value: "nil")),
-    "##NaN": ReadCell(kind: Value, value: Cell(kind: Double, doubleVal: NaN), token: Token(value: "##NaN")),
-  }.toTable
 
 func lex*(code: string, discardTypes: set[ReadCellKind] = {Whitespace}): seq[ReadCell] =
+  let
+    # TODO: make these constants
+    emptyCell = ReadCell(kind: Whitespace, token: Token(value: ""))
+    dispatchCell = ReadCell(kind: SpecialCharacter, token: Token(value: $hash))
+
   var
     temp = emptyCell
     escaping = false
     line = 1
     column = 1
 
-  proc flush(res: var seq[ReadCell]) =
+  func flush(res: var seq[ReadCell]) =
     if temp != emptyCell and temp.kind notin discardTypes:
       res.add(temp)
     temp = emptyCell
 
-  proc save(res: var seq[ReadCell], cell: ReadCell, compatibleTypes: set[ReadCellKind], compatibleValueTypes: set[CellKind]) =
+  func save(res: var seq[ReadCell], cell: ReadCell, compatibleTypes: set[ReadCellKind], compatibleValueTypes: set[CellKind]) =
     if temp.kind in compatibleTypes or (temp.kind == Value and temp.value.kind in compatibleValueTypes):
       temp.token.value &= cell.token.value
     else:
@@ -196,6 +193,15 @@ func parseCollection*(cells: seq[ReadCell], index: var int, delimiter: ReadCell)
   @[delim] & contents
 
 func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
+  let
+    ## TODO: make this a constant
+    specialSyms = {
+      "true": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: true), token: Token(value: "true")),
+      "false": ReadCell(kind: Value, value: Cell(kind: Boolean, booleanVal: false), token: Token(value: "false")),
+      "nil": ReadCell(kind: Value, value: Cell(kind: Nil), token: Token(value: "nil")),
+      "##NaN": ReadCell(kind: Value, value: Cell(kind: Double, doubleVal: NaN), token: Token(value: "##NaN")),
+    }.toTable
+
   if index == cells.len:
     return @[]
 

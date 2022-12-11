@@ -1,4 +1,5 @@
-import tables, sets, hashes, unicode
+import hashes, unicode
+import parazoa
 
 type
   ReadCellKind* = enum
@@ -51,8 +52,8 @@ type
     Fn,
     List,
     Vector,
-    Map,
-    Set,
+    HashMap,
+    HashSet,
   ErrorKind* = enum
     NotImplemented,
     InvalidToken,
@@ -87,17 +88,17 @@ type
       fnVal*: proc (ctx: Context, cells: seq[Cell]): Cell {.noSideEffect.}
       fnStringVal*: string
     of List:
-      listVal*: seq[Cell]
+      listVal*: Vec[Cell]
     of Vector:
-      vectorVal*: seq[Cell]
-    of Map:
-      mapVal*: Table[Cell, Cell]
-    of Set:
-      setVal*: HashSet[Cell]
+      vectorVal*: Vec[Cell]
+    of HashMap:
+      mapVal*: Map[Cell, Cell]
+    of HashSet:
+      setVal*: Set[Cell]
     token*: Token
   Context* = object
     printLimit*: int
-    vars*: Table[string, Cell]
+    vars*: Map[string, Cell]
 
 func `==`*(a, b: ReadCell): bool =
   if a.kind == b.kind:
@@ -146,9 +147,9 @@ func hash*(a: Cell): Hash =
     a.listVal.hash
   of Vector:
     a.vectorVal.hash
-  of Map:
+  of HashMap:
     a.mapVal.hash
-  of Set:
+  of HashSet:
     a.setVal.hash
 
 func `==`*(a, b: Cell): bool =
@@ -178,9 +179,9 @@ func `==`*(a, b: Cell): bool =
       a.listVal == b.listVal
     of Vector:
       a.vectorVal == b.vectorVal
-    of Map:
+    of HashMap:
       a.mapVal == b.mapVal
-    of Set:
+    of HashSet:
       a.setVal == b.setVal
   else:
     false

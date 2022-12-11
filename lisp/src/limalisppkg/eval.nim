@@ -1,6 +1,7 @@
-from ./types import Cell, CellKind, ErrorKind, `==`, `<`, `<=`
+import ./types
 from ./print import nil
-import tables, sets, unicode
+import tables, unicode
+import parazoa
 from sequtils import nil
 from math import nil
 
@@ -8,8 +9,8 @@ const
   delimToType = {
     "(": List,
     "[": Vector,
-    "{": Map,
-    "#{": Set,
+    "{": HashMap,
+    "#{": HashSet,
   }.toTable
 
 func isAllLongs(args: seq[Cell]): bool =
@@ -37,30 +38,54 @@ template evalCells(ctx: types.Context, readCells: seq[types.ReadCell]): seq[Cell
       cells.add(res)
   cells
 
-template toSeq(cell: Cell): untyped =
+template toVec(cell: Cell): untyped =
   case cell.kind:
   of List:
     cell.listVal
   of Vector:
     cell.vectorVal
-  of Map:
-    var s: seq[Cell]
+  of HashMap:
+    var x = initVec[Cell]()
     for (k, v) in cell.mapVal.pairs:
-      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
-    s
-  of Set:
-    var s: seq[Cell]
-    for v in cell.setVal.items:
-      s.add(v)
-    s
+      x = x.add(Cell(kind: Vector, vectorVal: [k, v].toVec))
+    x
+  of HashSet:
+    var x = initVec[Cell]()
+    for k in cell.setVal.items:
+      x = x.add(k)
+    x
   of Nil:
-    newSeq[Cell]()
+    initVec[Cell]()
+  else:
+    return Cell(kind: Error, error: InvalidType, token: cell.token)
+
+template toSet(cell: Cell): untyped =
+  case cell.kind:
+  of List:
+    var x = initSet[Cell]()
+    for k in cell.listVal.items:
+      x = x.incl(k)
+    x
+  of Vector:
+    var x = initSet[Cell]()
+    for k in cell.vectorVal.items:
+      x = x.incl(k)
+    x
+  of HashMap:
+    var x = initSet[Cell]()
+    for (k, v) in cell.mapVal.pairs:
+      x = x.incl(Cell(kind: Vector, vectorVal: [k, v].toVec))
+    x
+  of HashSet:
+    cell.setVal
+  of Nil:
+    initSet[Cell]()
   else:
     return Cell(kind: Error, error: InvalidType, token: cell.token)
 
 func nilPun(cell: Cell): Cell =
   if cell.kind == Nil:
-    Cell(kind: Vector, vectorVal: @[])
+    Cell(kind: Vector, vectorVal: initVec[Cell]())
   else:
     cell
 
@@ -236,50 +261,52 @@ func dec*(ctx: types.Context, args: seq[Cell]): Cell =
 func vec*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  types.checkKind(cell, {List, Vector, Map, Set})
-  Cell(kind: Vector, vectorVal: toSeq(cell))
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
+  Cell(kind: Vector, vectorVal: cell.toVec)
 
 func set*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  types.checkKind(cell, {List, Vector, Map, Set})
-  if cell.kind == Set:
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
+  if cell.kind == HashSet:
     cell
   else:
-    Cell(kind: Set, setVal: toSeq(cell).toHashSet)
+    Cell(kind: HashSet, setVal: cell.toSet)
 
 func nth*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   let cell = args[0].nilPun
-  types.checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
   types.checkKind(args[1], {Long})
   let index = args[1].longVal
+  if index < 0:
+    return Cell(kind: Error, error: IndexOutOfBounds)
   case cell.kind:
   of List:
     if cell.listVal.len > index:
-      cell.listVal[index]
+      cell.listVal.get(index.int)
     else:
       Cell(kind: Error, error: IndexOutOfBounds)
   of Vector:
     if cell.vectorVal.len > index:
-      cell.vectorVal[index]
+      cell.vectorVal.get(index.int)
     else:
       Cell(kind: Error, error: IndexOutOfBounds)
-  of Map:
+  of HashMap:
     # TODO: make this more efficient
-    var s: seq[Cell]
-    for (k, v) in cell.mapVal.pairs:
-      s.add(Cell(kind: Vector, vectorVal: @[k, v]))
-    if s.len > index:
+    if cell.mapVal.len > index:
+      var s: seq[Cell]
+      for (k, v) in cell.mapVal.pairs:
+        s.add(Cell(kind: Vector, vectorVal: [k, v].toVec))
       s[index]
     else:
       Cell(kind: Error, error: IndexOutOfBounds)
-  of Set:
+  of HashSet:
     # TODO: make this more efficient
-    var s: seq[Cell]
-    for v in cell.setVal.items:
-      s.add(v)
-    if s.len > index:
+    if cell.setVal.len > index:
+      var s: seq[Cell]
+      for v in cell.setVal.items:
+        s.add(v)
       s[index]
     else:
       Cell(kind: Error, error: IndexOutOfBounds)
@@ -289,15 +316,15 @@ func nth*(ctx: types.Context, args: seq[Cell]): Cell =
 func count*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
-  types.checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
   case cell.kind:
   of List:
     Cell(kind: Long, longVal: cell.listVal.len)
   of Vector:
     Cell(kind: Long, longVal: cell.vectorVal.len)
-  of Map:
+  of HashMap:
     Cell(kind: Long, longVal: cell.mapVal.len)
-  of Set:
+  of HashSet:
     Cell(kind: Long, longVal: cell.setVal.len)
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
@@ -321,19 +348,19 @@ func conj(cell: Cell, contents: seq[Cell]): Cell =
   case cell.kind:
   of List:
     for arg in contents:
-      res.listVal = @[arg] & res.listVal
+      res.listVal = [arg].toVec & res.listVal
   of Vector:
-    res.vectorVal &= contents
-  of Map:
+    res.vectorVal &= contents.toVec
+  of HashMap:
     for arg in contents:
       if arg.kind == Vector and arg.vectorVal.len == 2:
         let
-          k = arg.vectorVal[0]
-          v = arg.vectorVal[1]
-        res.mapVal[k] = v
-  of Set:
+          k = arg.vectorVal.get(0)
+          v = arg.vectorVal.get(1)
+        res.mapVal = res.mapVal.add(k, v)
+  of HashSet:
     for arg in contents:
-      res.setVal.incl(arg)
+      res.setVal = res.setVal.incl(arg)
   else:
     return Cell(kind: Error, error: InvalidType, token: cell.token)
   res
@@ -341,40 +368,40 @@ func conj(cell: Cell, contents: seq[Cell]): Cell =
 func conj*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2)
   let cell = args[0].nilPun
-  types.checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
   conj(cell, args[1 ..< args.len])
 
 func cons*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2)
   let lastCell = args[args.len-1].nilPun
-  types.checkKind(lastCell, {List, Vector, Map, Set})
-  Cell(kind: List, listVal: args[0 ..< args.len-1] & toSeq(lastCell))
+  types.checkKind(lastCell, {List, Vector, HashMap, HashSet})
+  Cell(kind: List, listVal: args[0 ..< args.len-1].toVec & lastCell.toVec)
 
 func disj*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
-    cell = Cell(kind: Set)
-  types.checkKind(cell, {Set})
-  cell.setVal.excl(args[1])
+    cell = Cell(kind: HashSet, setVal: initSet[Cell]())
+  types.checkKind(cell, {HashSet})
+  cell.setVal = cell.setVal.excl(args[1])
   cell
 
 func list*(ctx: types.Context, args: seq[Cell]): Cell =
-  Cell(kind: List, listVal: args)
+  Cell(kind: List, listVal: args.toVec)
 
 func vector*(ctx: types.Context, args: seq[Cell]): Cell =
-  Cell(kind: Vector, vectorVal: args)
+  Cell(kind: Vector, vectorVal: args.toVec)
 
 func hashMap*(ctx: types.Context, args: seq[Cell]): Cell =
   if args.len mod 2 != 0:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
-  var t: Table[Cell, Cell]
+  var t = initMap[Cell, Cell]()
   for i in 0 ..< int(args.len / 2):
-    t[args[i*2]] = args[i*2+1]
-  Cell(kind: Map, mapVal: t)
+    t = t.add(args[i*2], args[i*2+1])
+  Cell(kind: HashMap, mapVal: t)
 
 func hashSet*(ctx: types.Context, args: seq[Cell]): Cell =
-  Cell(kind: Set, setVal: args.toHashSet)
+  Cell(kind: HashSet, setVal: args.toSet)
 
 func get*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 3)
@@ -386,24 +413,24 @@ func get*(ctx: types.Context, args: seq[Cell]): Cell =
         args[2]
       else:
         Cell(kind: Nil)
-  types.checkKind(cell, {List, Vector, Map, Set})
+  types.checkKind(cell, {List, Vector, HashMap, HashSet})
   case cell.kind:
   of List:
     if key.kind == Long and cell.listVal.len > key.longVal:
-      cell.listVal[key.longVal]
+      cell.listVal.get(key.longVal.int)
     else:
       notFound
   of Vector:
     if key.kind == Long and cell.vectorVal.len > key.longVal:
-      cell.vectorVal[key.longVal]
+      cell.vectorVal.get(key.longVal.int)
     else:
       notFound
-  of Map:
+  of HashMap:
     if key in cell.mapVal:
-      cell.mapVal[key]
+      cell.mapVal.get(key)
     else:
       notFound
-  of Set:
+  of HashSet:
     if key in cell.setVal:
       Cell(kind: Boolean, booleanVal: true)
     else:
@@ -446,7 +473,7 @@ func double*(ctx: types.Context, args: seq[Cell]): Cell =
 
 func concat*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
-  types.checkKind(args, {List, Vector, Map, Set, Nil})
+  types.checkKind(args, {List, Vector, HashMap, HashSet, Nil})
   var ret = Cell(kind: Nil)
   for cell in args:
     case ret.kind:
@@ -457,11 +484,11 @@ func concat*(ctx: types.Context, args: seq[Cell]): Cell =
       of Nil:
         continue
       else:
-        ret = Cell(kind: Vector, vectorVal: toSeq(cell))
+        ret = Cell(kind: Vector, vectorVal: cell.toVec)
     of List:
-      ret.listVal &= toSeq(cell)
+      ret.listVal &= cell.toVec
     of Vector:
-      ret.vectorVal &= toSeq(cell)
+      ret.vectorVal &= cell.toVec
     else:
       return Cell(kind: Error, error: InvalidType, token: cell.token)
   ret
@@ -470,8 +497,8 @@ func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
-    cell = Cell(kind: Map)
-  types.checkKind(cell, {List, Vector, Map})
+    cell = Cell(kind: HashMap, mapVal: initMap[Cell, Cell]())
+  types.checkKind(cell, {List, Vector, HashMap})
   let cells = args[1 ..< args.len]
   if cells.len mod 2 != 0:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
@@ -485,15 +512,15 @@ func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
         return Cell(kind: Error, error: InvalidType, token: key.token)
       elif cell.listVal.len <= key.longVal:
         return Cell(kind: Error, error: IndexOutOfBounds, token: key.token)
-      cell.listVal[key.longVal] = val
+      cell.listVal = cell.listVal.add(key.longVal.int, val)
     of Vector:
       if key.kind != Long:
         return Cell(kind: Error, error: InvalidType, token: key.token)
       elif cell.vectorVal.len <= key.longVal:
         return Cell(kind: Error, error: IndexOutOfBounds, token: key.token)
-      cell.vectorVal[key.longVal] = val
-    of Map:
-      cell.mapVal[key] = val
+      cell.vectorVal = cell.vectorVal.add(key.longVal.int, val)
+    of HashMap:
+      cell.mapVal = cell.mapVal.add(key, val)
     else:
       return Cell(kind: Error, error: InvalidType, token: cell.token)
   cell
@@ -501,61 +528,63 @@ func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
 func keys*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  types.checkKind(cell, {Map})
-  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.keys))
+  types.checkKind(cell, {HashMap})
+  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.keys).toVec)
 
 func values*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
-  types.checkKind(cell, {Map})
-  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values))
+  types.checkKind(cell, {HashMap})
+  Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values).toVec)
 
 func initContext*(): types.Context =
   result.printLimit = print.printLimit
-  result.vars["="] = Cell(kind: Fn, fnVal: eq, fnStringVal: "=")
-  result.vars[">"] = Cell(kind: Fn, fnVal: gt, fnStringVal: ">")
-  result.vars[">="] = Cell(kind: Fn, fnVal: ge, fnStringVal: ">=")
-  result.vars["<"] = Cell(kind: Fn, fnVal: lt, fnStringVal: "<")
-  result.vars["<="] = Cell(kind: Fn, fnVal: le, fnStringVal: "<=")
-  result.vars["min"] = Cell(kind: Fn, fnVal: min, fnStringVal: "min")
-  result.vars["max"] = Cell(kind: Fn, fnVal: max, fnStringVal: "max")
-  result.vars["+"] = Cell(kind: Fn, fnVal: plus, fnStringVal: "+")
-  result.vars["-"] = Cell(kind: Fn, fnVal: minus, fnStringVal: "-")
-  result.vars["*"] = Cell(kind: Fn, fnVal: times, fnStringVal: "*")
-  result.vars["/"] = Cell(kind: Fn, fnVal: divide, fnStringVal: "/")
-  result.vars["nan?"] = Cell(kind: Fn, fnVal: isNaN, fnStringVal: "nan?")
-  result.vars["mod"] = Cell(kind: Fn, fnVal: `mod`, fnStringVal: "mod")
-  result.vars["pow"] = Cell(kind: Fn, fnVal: pow, fnStringVal: "pow")
-  result.vars["exp"] = Cell(kind: Fn, fnVal: exp, fnStringVal: "exp")
-  result.vars["floor"] = Cell(kind: Fn, fnVal: floor, fnStringVal: "floor")
-  result.vars["ceil"] = Cell(kind: Fn, fnVal: ceil, fnStringVal: "ceil")
-  result.vars["sqrt"] = Cell(kind: Fn, fnVal: sqrt, fnStringVal: "sqrt")
-  result.vars["abs"] = Cell(kind: Fn, fnVal: abs, fnStringVal: "abs")
-  result.vars["signum"] = Cell(kind: Fn, fnVal: signum, fnStringVal: "signum")
-  result.vars["inc"] = Cell(kind: Fn, fnVal: inc, fnStringVal: "inc")
-  result.vars["dec"] = Cell(kind: Fn, fnVal: dec, fnStringVal: "dec")
-  result.vars["vec"] = Cell(kind: Fn, fnVal: vec, fnStringVal: "vec")
-  result.vars["set"] = Cell(kind: Fn, fnVal: set, fnStringVal: "set")
-  result.vars["nth"] = Cell(kind: Fn, fnVal: nth, fnStringVal: "nth")
-  result.vars["count"] = Cell(kind: Fn, fnVal: count, fnStringVal: "count")
-  result.vars["print"] = Cell(kind: Fn, fnVal: print.print, fnStringVal: "print")
-  result.vars["str"] = Cell(kind: Fn, fnVal: print.str, fnStringVal: "str")
-  result.vars["name"] = Cell(kind: Fn, fnVal: name, fnStringVal: "name")
-  result.vars["conj"] = Cell(kind: Fn, fnVal: conj, fnStringVal: "conj")
-  result.vars["cons"] = Cell(kind: Fn, fnVal: cons, fnStringVal: "cons")
-  result.vars["disj"] = Cell(kind: Fn, fnVal: disj, fnStringVal: "disj")
-  result.vars["list"] = Cell(kind: Fn, fnVal: list, fnStringVal: "list")
-  result.vars["vector"] = Cell(kind: Fn, fnVal: vector, fnStringVal: "vector")
-  result.vars["hash-map"] = Cell(kind: Fn, fnVal: hashMap, fnStringVal: "hash-map")
-  result.vars["hash-set"] = Cell(kind: Fn, fnVal: hashSet, fnStringVal: "hash-set")
-  result.vars["get"] = Cell(kind: Fn, fnVal: get, fnStringVal: "get")
-  result.vars["boolean"] = Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean")
-  result.vars["long"] = Cell(kind: Fn, fnVal: long, fnStringVal: "long")
-  result.vars["double"] = Cell(kind: Fn, fnVal: double, fnStringVal: "double")
-  result.vars["concat"] = Cell(kind: Fn, fnVal: concat, fnStringVal: "concat")
-  result.vars["assoc"] = Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc")
-  result.vars["keys"] = Cell(kind: Fn, fnVal: keys, fnStringVal: "keys")
-  result.vars["values"] = Cell(kind: Fn, fnVal: values, fnStringVal: "values")
+  result.vars = {
+    "=": Cell(kind: Fn, fnVal: eq, fnStringVal: "="),
+    ">": Cell(kind: Fn, fnVal: gt, fnStringVal: ">"),
+    ">=": Cell(kind: Fn, fnVal: ge, fnStringVal: ">="),
+    "<": Cell(kind: Fn, fnVal: lt, fnStringVal: "<"),
+    "<=": Cell(kind: Fn, fnVal: le, fnStringVal: "<="),
+    "min": Cell(kind: Fn, fnVal: min, fnStringVal: "min"),
+    "max": Cell(kind: Fn, fnVal: max, fnStringVal: "max"),
+    "+": Cell(kind: Fn, fnVal: plus, fnStringVal: "+"),
+    "-": Cell(kind: Fn, fnVal: minus, fnStringVal: "-"),
+    "*": Cell(kind: Fn, fnVal: times, fnStringVal: "*"),
+    "/": Cell(kind: Fn, fnVal: divide, fnStringVal: "/"),
+    "nan?": Cell(kind: Fn, fnVal: isNaN, fnStringVal: "nan?"),
+    "mod": Cell(kind: Fn, fnVal: `mod`, fnStringVal: "mod"),
+    "pow": Cell(kind: Fn, fnVal: pow, fnStringVal: "pow"),
+    "exp": Cell(kind: Fn, fnVal: exp, fnStringVal: "exp"),
+    "floor": Cell(kind: Fn, fnVal: floor, fnStringVal: "floor"),
+    "ceil": Cell(kind: Fn, fnVal: ceil, fnStringVal: "ceil"),
+    "sqrt": Cell(kind: Fn, fnVal: sqrt, fnStringVal: "sqrt"),
+    "abs": Cell(kind: Fn, fnVal: abs, fnStringVal: "abs"),
+    "signum": Cell(kind: Fn, fnVal: signum, fnStringVal: "signum"),
+    "inc": Cell(kind: Fn, fnVal: inc, fnStringVal: "inc"),
+    "dec": Cell(kind: Fn, fnVal: dec, fnStringVal: "dec"),
+    "vec": Cell(kind: Fn, fnVal: vec, fnStringVal: "vec"),
+    "set": Cell(kind: Fn, fnVal: set, fnStringVal: "set"),
+    "nth": Cell(kind: Fn, fnVal: nth, fnStringVal: "nth"),
+    "count": Cell(kind: Fn, fnVal: count, fnStringVal: "count"),
+    "print": Cell(kind: Fn, fnVal: print.print, fnStringVal: "print"),
+    "str": Cell(kind: Fn, fnVal: print.str, fnStringVal: "str"),
+    "name": Cell(kind: Fn, fnVal: name, fnStringVal: "name"),
+    "conj": Cell(kind: Fn, fnVal: conj, fnStringVal: "conj"),
+    "cons": Cell(kind: Fn, fnVal: cons, fnStringVal: "cons"),
+    "disj": Cell(kind: Fn, fnVal: disj, fnStringVal: "disj"),
+    "list": Cell(kind: Fn, fnVal: list, fnStringVal: "list"),
+    "vector": Cell(kind: Fn, fnVal: vector, fnStringVal: "vector"),
+    "hash-map": Cell(kind: Fn, fnVal: hashMap, fnStringVal: "hash-map"),
+    "hash-set": Cell(kind: Fn, fnVal: hashSet, fnStringVal: "hash-set"),
+    "get": Cell(kind: Fn, fnVal: get, fnStringVal: "get"),
+    "boolean": Cell(kind: Fn, fnVal: boolean, fnStringVal: "boolean"),
+    "long": Cell(kind: Fn, fnVal: long, fnStringVal: "long"),
+    "double": Cell(kind: Fn, fnVal: double, fnStringVal: "double"),
+    "concat": Cell(kind: Fn, fnVal: concat, fnStringVal: "concat"),
+    "assoc": Cell(kind: Fn, fnVal: assoc, fnStringVal: "assoc"),
+    "keys": Cell(kind: Fn, fnVal: keys, fnStringVal: "keys"),
+    "values": Cell(kind: Fn, fnVal: values, fnStringVal: "values"),
+  }.toMap
 
 func invoke*(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
@@ -580,29 +609,29 @@ func eval*(ctx: types.Context, readCell: types.ReadCell): Cell =
           res.token = readCell.token
         res
       else:
-        Cell(kind: List, listVal: @[], token: readCell.token)
+        Cell(kind: List, listVal: initVec[Cell](), token: readCell.token)
     of Vector:
-      Cell(kind: Vector, vectorVal: evalCells(ctx, readCell.contents))
-    of Map:
+      Cell(kind: Vector, vectorVal: evalCells(ctx, readCell.contents).toVec)
+    of HashMap:
       if readCell.contents.len mod 2 != 0:
         return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: readCell.token)
       let cells = evalCells(ctx, readCell.contents)
-      var t: Table[Cell, Cell]
+      var t = initMap[Cell, Cell]()
       for i in 0 ..< int(cells.len / 2):
-        t[cells[i*2]] = cells[i*2+1]
-      Cell(kind: Map, mapVal: t)
-    of Set:
-      var hs: HashSet[Cell]
+        t = t.add(cells[i*2], cells[i*2+1])
+      Cell(kind: HashMap, mapVal: t)
+    of HashSet:
+      var hs = initSet[Cell]()
       for cell in evalCells(ctx, readCell.contents):
-        hs.incl(cell)
-      Cell(kind: Set, setVal: hs)
+        hs = hs.incl(cell)
+      Cell(kind: HashSet, setVal: hs)
     else:
       Cell(kind: Error, error: NotImplemented, token: readCell.token)
   of types.Value:
     case readCell.value.kind:
     of types.Symbol:
       if readCell.token.value in ctx.vars:
-        var ret = ctx.vars[readCell.token.value]
+        var ret = ctx.vars.get(readCell.token.value)
         ret.token = readCell.token
         ret
       else:

@@ -12,3 +12,4 @@ bin           = @["limalisp"]
 # Dependencies
 
 requires "nim >= 1.6.8"
+requires "parazoa >= 0.1.0"
