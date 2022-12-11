@@ -122,35 +122,39 @@ func name*(s: string): string =
   s[i ..< s.len]
 
 func hash*(a: Cell): Hash =
-  case a.kind:
-  of Error:
-    a.error.hash
-  of Nil:
-    nil.hash
-  of Boolean:
-    a.booleanVal.hash
-  of Long:
-    a.longVal.hash
-  of Double:
-    a.doubleVal.hash
-  of Character:
-    a.characterVal.hash
-  of Symbol:
-    a.symbolVal.hash
-  of String:
-    a.stringVal.hash
-  of Keyword:
-    a.keywordVal.hash
-  of Fn:
-    a.fnVal.hash
-  of List:
-    a.listVal.hash
-  of Vector:
-    a.vectorVal.hash
-  of HashMap:
-    a.mapVal.hash
-  of HashSet:
-    a.setVal.hash
+  let valHash =
+    case a.kind:
+    of Error:
+      a.error.hash
+    of Nil:
+      nil.hash
+    of Boolean:
+      a.booleanVal.hash
+    of Long:
+      a.longVal.hash
+    of Double:
+      a.doubleVal.hash
+    of Character:
+      a.characterVal.hash
+    of Symbol:
+      a.symbolVal.hash
+    of String:
+      a.stringVal.hash
+    of Keyword:
+      a.keywordVal.hash
+    of Fn:
+      a.fnVal.hash
+    of List:
+      a.listVal.hash
+    of Vector:
+      a.vectorVal.hash
+    of HashMap:
+      a.mapVal.hash
+    of HashSet:
+      a.setVal.hash
+  var h = hash(a.kind)
+  h = h !& valHash
+  !$h
 
 func `==`*(a, b: Cell): bool =
   if a.kind == b.kind:

@@ -178,15 +178,15 @@ test "vec":
   ].toVec)
   check eval.eval(read.read("(vec {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: Vector, vectorVal: [
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
+      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
     ].toVec),
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
+      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
     ].toVec),
   ].toVec)
   check eval.eval(read.read("(vec #{:foo 1 :bar 1})")[0]) == Cell(kind: Vector, vectorVal: [
-    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Keyword, keywordVal: ":bar"),
+    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Long, longVal: 1),
   ].toVec)
   check eval.eval(read.read("(vec nil)")[0]) == Cell(kind: Vector, vectorVal: initVec[Cell]())
@@ -215,9 +215,9 @@ test "set":
 test "nth":
   check eval.eval(read.read("(nth [1 \"hi\" :wassup] 1)")[0]) == Cell(kind: String, stringVal: "hi")
   check eval.eval(read.read("(nth {:foo 1 :bar \"hi\"} 1)")[0]) == Cell(kind: Vector, vectorVal: [
-    Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
+    Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
   ].toVec)
-  check eval.eval(read.read("(nth #{:foo 1 :bar 1} 1)")[0]) == Cell(kind: Keyword, keywordVal: ":bar")
+  check eval.eval(read.read("(nth #{:foo 1 :bar 1} 1)")[0]) == Cell(kind: Keyword, keywordVal: ":foo")
   check eval.eval(read.read("(nth [] 0)")[0]) == Cell(kind: Error, error: IndexOutOfBounds)
   check eval.eval(read.read("(nth nil 0)")[0]) == Cell(kind: Error, error: IndexOutOfBounds)
 
@@ -232,8 +232,8 @@ test "print":
   check eval.eval(read.read("(print \"hi\nthere!\")")[0]) == Cell(kind: String, stringVal: "\"hi\\nthere!\"")
   check eval.eval(read.read("(print :wassup)")[0]) == Cell(kind: String, stringVal: ":wassup")
   check eval.eval(read.read("(print [1 \"hi\" :wassup])")[0]) == Cell(kind: String, stringVal: "[1 \"hi\" :wassup]")
-  check eval.eval(read.read("(print {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: String, stringVal: "{:foo 1 :bar \"hi\"}")
-  check eval.eval(read.read("(print #{:foo 1 :bar 1})")[0]) == Cell(kind: String, stringVal: "#{:foo :bar 1}")
+  check eval.eval(read.read("(print {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: String, stringVal: "{:bar \"hi\" :foo 1}")
+  check eval.eval(read.read("(print #{:foo 1 :bar 1})")[0]) == Cell(kind: String, stringVal: "#{:bar :foo 1}")
   var ctx = eval.initContext()
   ctx.printLimit = 10
   check eval.eval(ctx, read.read("(print \"this string is too long\")")[0]) == Cell(kind: Error, error: PrintLengthLimitExceeded)
@@ -243,8 +243,8 @@ test "str":
   check eval.eval(read.read("(str \"hi\nthere!\")")[0]) == Cell(kind: String, stringVal: "hi\nthere!")
   check eval.eval(read.read("(str :wassup)")[0]) == Cell(kind: String, stringVal: ":wassup")
   check eval.eval(read.read("(str [1 \"hi\" :wassup])")[0]) == Cell(kind: String, stringVal: "[1 \"hi\" :wassup]")
-  check eval.eval(read.read("(str {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: String, stringVal: "{:foo 1 :bar \"hi\"}")
-  check eval.eval(read.read("(str #{:foo 1 :bar 1})")[0]) == Cell(kind: String, stringVal: "#{:foo :bar 1}")
+  check eval.eval(read.read("(str {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: String, stringVal: "{:bar \"hi\" :foo 1}")
+  check eval.eval(read.read("(str #{:foo 1 :bar 1})")[0]) == Cell(kind: String, stringVal: "#{:bar :foo 1}")
   check eval.eval(read.read("(str \"hello\" \"world\")")[0]) == Cell(kind: String, stringVal: "helloworld")
   check eval.eval(read.read("(str nil 123)")[0]) == Cell(kind: String, stringVal: "123")
   check eval.eval(read.read("(str {:a nil})")[0]) == Cell(kind: String, stringVal: "{:a nil}")
@@ -299,16 +299,16 @@ test "cons":
   check eval.eval(read.read("(cons 2 {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: List, listVal: [
     Cell(kind: Long, longVal: 2),
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
+      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
     ].toVec),
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
+      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
     ].toVec),
   ].toVec)
   check eval.eval(read.read("(cons 2 #{:foo 1 :bar 1})")[0]) == Cell(kind: List, listVal: [
     Cell(kind: Long, longVal: 2),
-    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Keyword, keywordVal: ":bar"),
+    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Long, longVal: 1),
   ].toVec)
   check eval.eval(read.read("(cons 2 nil)")[0]) == Cell(kind: List, listVal: [
@@ -372,16 +372,16 @@ test "concat":
   ].toVec)
   check eval.eval(read.read("(concat {:foo 1 :bar \"hi\"} [2])")[0]) == Cell(kind: Vector, vectorVal: [
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
+      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
     ].toVec),
     Cell(kind: Vector, vectorVal: [
-      Cell(kind: Keyword, keywordVal: ":bar"), Cell(kind: String, stringVal: "hi"),
+      Cell(kind: Keyword, keywordVal: ":foo"), Cell(kind: Long, longVal: 1),
     ].toVec),
     Cell(kind: Long, longVal: 2),
   ].toVec)
   check eval.eval(read.read("(concat #{:foo 1 :bar 1} [2])")[0]) == Cell(kind: Vector, vectorVal: [
-    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Keyword, keywordVal: ":bar"),
+    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Long, longVal: 1),
     Cell(kind: Long, longVal: 2),
   ].toVec)
@@ -412,12 +412,12 @@ test "assoc":
 
 test "keys":
   check eval.eval(read.read("(keys {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: Vector, vectorVal: [
-    Cell(kind: Keyword, keywordVal: ":foo"),
     Cell(kind: Keyword, keywordVal: ":bar"),
+    Cell(kind: Keyword, keywordVal: ":foo"),
   ].toVec)
 
 test "values":
   check eval.eval(read.read("(values {:foo 1 :bar \"hi\"})")[0]) == Cell(kind: Vector, vectorVal: [
-    Cell(kind: Long, longVal: 1),
     Cell(kind: String, stringVal: "hi"),
+    Cell(kind: Long, longVal: 1),
   ].toVec)
