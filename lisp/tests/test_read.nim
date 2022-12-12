@@ -1,6 +1,6 @@
 import unittest
-from limalisppkg/types import CellKind, ErrorKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, Token, `==`
-from limalisppkg/read import nil
+from vexalisppkg/types import CellKind, ErrorKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, Token, `==`
+from vexalisppkg/read import nil
 
 test "lexing":
   check read.lex("1 1") == @[

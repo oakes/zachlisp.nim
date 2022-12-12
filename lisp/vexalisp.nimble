@@ -6,7 +6,7 @@ description   = "FIXME"
 license       = "FIXME"
 srcDir        = "src"
 installExt    = @["nim"]
-bin           = @["limalisp"]
+bin           = @["vexalisp"]
 
 
 # Dependencies

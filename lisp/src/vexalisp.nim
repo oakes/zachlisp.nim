@@ -1,7 +1,7 @@
-from ./limalisppkg/read import nil
-from ./limalisppkg/eval import nil
-from ./limalisppkg/print import nil
-from ./limalisppkg/types import nil
+from ./vexalisppkg/read import nil
+from ./vexalisppkg/eval import nil
+from ./vexalisppkg/print import nil
+from ./vexalisppkg/types import nil
 
 when isMainModule:
   var ctx = eval.initContext()
