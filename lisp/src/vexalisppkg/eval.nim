@@ -5,14 +5,6 @@ import parazoa
 from sequtils import nil
 from math import nil
 
-const
-  delimToType = {
-    "(": List,
-    "[": Vector,
-    "{": HashMap,
-    "#{": HashSet,
-  }.toTable
-
 func isAllLongs(args: seq[Cell]): bool =
   for arg in args:
     if arg.kind != Long:
@@ -28,14 +20,46 @@ template toDouble(cell: Cell) =
   else:
     return Cell(kind: Error, error: InvalidType, token: cell.token)
 
-template evalCells(ctx: types.Context, readCells: seq[types.ReadCell]): seq[Cell] =
+template evalCells(ctx: types.Context, unevaledCells: seq[Cell]): seq[Cell] =
   var cells: seq[Cell]
-  for cell in readCells:
+  for cell in unevaledCells:
     let res = eval(ctx, cell)
     if res.kind == Error:
       return res
     else:
       cells.add(res)
+  cells
+
+template evalCells(ctx: types.Context, unevaledCells: Vec[Cell]): Vec[Cell] =
+  var cells = initVec[Cell]()
+  for cell in unevaledCells:
+    let res = eval(ctx, cell)
+    if res.kind == Error:
+      return res
+    else:
+      cells = cells.add(res)
+  cells
+
+template evalCells(ctx: types.Context, unevaledCells: Map[Cell, Cell]): Map[Cell, Cell] =
+  var cells = initMap[Cell, Cell]()
+  for (k, v) in unevaledCells.pairs:
+    let k2 = eval(ctx, k)
+    if k2.kind == Error:
+      return k2
+    let v2 = eval(ctx, v)
+    if v2.kind == Error:
+      return v2
+    cells = cells.add(k2, v2)
+  cells
+
+template evalCells(ctx: types.Context, unevaledCells: Set[Cell]): Set[Cell] =
+  var cells = initSet[Cell]()
+  for cell in unevaledCells:
+    let res = eval(ctx, cell)
+    if res.kind == Error:
+      return res
+    else:
+      cells = cells.incl(res)
   cells
 
 template toVec(cell: Cell): untyped =
@@ -592,57 +616,34 @@ func invoke(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: NotAFunction, token: fn.token)
 
-func eval*(ctx: types.Context, readCell: types.ReadCell): Cell =
-  if readCell.error != types.None:
-    return Cell(kind: Error, error: InvalidToken, token: readCell.token)
-  case readCell.kind:
-  of types.Collection:
-    let delim = readCell.delims[0].token.value
-    let typ = delimToType[delim]
-    case typ:
-    of List:
-      let cells = evalCells(ctx, readCell.contents)
-      if cells.len > 0:
-        var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
-        # set the token if it hasn't been set already
-        if res.token.value == "":
-          res.token = readCell.token
-        res
-      else:
-        Cell(kind: List, listVal: initVec[Cell](), token: readCell.token)
-    of Vector:
-      Cell(kind: Vector, vectorVal: evalCells(ctx, readCell.contents).toVec)
-    of HashMap:
-      if readCell.contents.len mod 2 != 0:
-        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: readCell.token)
-      let cells = evalCells(ctx, readCell.contents)
-      var t = initMap[Cell, Cell]()
-      for i in 0 ..< int(cells.len / 2):
-        t = t.add(cells[i*2], cells[i*2+1])
-      Cell(kind: HashMap, mapVal: t)
-    of HashSet:
-      var hs = initSet[Cell]()
-      for cell in evalCells(ctx, readCell.contents):
-        hs = hs.incl(cell)
-      Cell(kind: HashSet, setVal: hs)
+func eval*(ctx: types.Context, cell: Cell): Cell =
+  case cell.kind:
+  of List:
+    let cells = sequtils.toSeq(evalCells(ctx, cell.listVal).items)
+    if cells.len > 0:
+      var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
+      # set the token if it hasn't been set already
+      if res.token.value == "":
+        res.token = cell.token
+      res
     else:
-      Cell(kind: Error, error: NotImplemented, token: readCell.token)
-  of types.Value:
-    case readCell.value.kind:
-    of types.Symbol:
-      if readCell.token.value in ctx.vars:
-        var ret = ctx.vars.get(readCell.token.value)
-        ret.token = readCell.token
-        ret
-      else:
-        Cell(kind: Error, error: VarDoesNotExist, token: readCell.token)
-    else:
-      var ret = readCell.value
-      ret.token = readCell.token
+      cell
+  of Vector:
+    Cell(kind: Vector, vectorVal: evalCells(ctx, cell.vectorVal))
+  of HashMap:
+    Cell(kind: HashMap, mapVal: evalCells(ctx, cell.mapVal))
+  of HashSet:
+    Cell(kind: HashSet, setVal: evalCells(ctx, cell.setVal))
+  of Symbol:
+    if cell.symbolVal in ctx.vars:
+      var ret = ctx.vars.get(cell.symbolVal)
+      ret.token = cell.token
       ret
+    else:
+      Cell(kind: Error, error: VarDoesNotExist, token: cell.token)
   else:
-    Cell(kind: Error, error: NotImplemented, token: readCell.token)
+    cell
 
-func eval*(readCell: types.ReadCell): Cell =
+func eval*(cell: Cell): Cell =
   var ctx = initContext()
-  eval(ctx, readCell)
+  eval(ctx, cell)

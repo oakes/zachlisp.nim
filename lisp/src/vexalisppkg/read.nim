@@ -1,6 +1,8 @@
 from ./types import ReadCell, ReadCellKind, ReadErrorKind, Cell, CellKind, ErrorKind, Token, hash, `==`, `<`, `<=`
-import unicode, tables, sets
+import unicode, tables
+from sets import toHashSet, contains, incl, excl
 from parseutils import nil
+import parazoa
 
 const
   openDelims = {'(', '[', '{'}
@@ -11,6 +13,12 @@ const
     '{': '}',
   }.toTable
   validOpenDelims = ["(", "[", "{", "#{"].toHashSet
+  delimToType = {
+    "(": List,
+    "[": Vector,
+    "{": HashMap,
+    "#{": HashSet,
+  }.toTable
   digits = {'0'..'9'}
   whitespace = {' ', '\t', '\r', '\n', ','}
   hash = '#'
@@ -263,7 +271,9 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
         res.token.position = cell.token.position
         @[res]
       else:
-        @[cell]
+        var res = cell
+        res.value.symbolVal = cell.token.value
+        @[res]
     of Keyword:
       var res = cell
       res.value.keywordVal = cell.token.value
@@ -302,5 +312,53 @@ func parse*(cells: seq[ReadCell]): seq[ReadCell] =
   while index < cells.len:
     result.add(parse(cells, index))
 
-func read*(code: string): seq[ReadCell] =
-  code.lex().parse()
+template expandCells(readCells: seq[types.ReadCell]): seq[Cell] =
+  var cells: seq[Cell]
+  for cell in readCells:
+    let res = macroexpand(cell)
+    if res.kind == Error:
+      return res
+    else:
+      cells.add(res)
+  cells
+
+func macroexpand*(readCell: ReadCell): Cell =
+  if readCell.error != None:
+    return Cell(kind: Error, error: InvalidToken, token: readCell.token)
+  case readCell.kind:
+  of Collection:
+    let delim = readCell.delims[0].token.value
+    let typ = delimToType[delim]
+    case typ:
+    of List:
+      Cell(kind: List, listVal: expandCells(readCell.contents).toVec, token: readCell.token)
+    of Vector:
+      Cell(kind: Vector, vectorVal: expandCells(readCell.contents).toVec)
+    of HashMap:
+      if readCell.contents.len mod 2 != 0:
+        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: readCell.token)
+      let cells = expandCells(readCell.contents)
+      var t = initMap[Cell, Cell]()
+      for i in 0 ..< int(cells.len / 2):
+        t = t.add(cells[i*2], cells[i*2+1])
+      Cell(kind: HashMap, mapVal: t)
+    of HashSet:
+      var hs = initSet[Cell]()
+      for cell in expandCells(readCell.contents):
+        hs = hs.incl(cell)
+      Cell(kind: HashSet, setVal: hs)
+    else:
+      Cell(kind: Error, error: NotImplemented, token: readCell.token)
+  of Value:
+    var ret = readCell.value
+    ret.token = readCell.token
+    ret
+  else:
+    Cell(kind: Error, error: NotImplemented, token: readCell.token)
+
+func macroexpand*(cells: seq[ReadCell]): seq[Cell] =
+  for cell in cells:
+    result.add(macroexpand(cell))
+
+func read*(code: string): seq[Cell] =
+  code.lex().parse().macroexpand()
