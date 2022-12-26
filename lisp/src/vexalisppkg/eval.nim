@@ -1,4 +1,4 @@
-import ./types
+from ./types import Cell, CellKind, ErrorKind, hash, `==`, `<`, `<=`
 from ./print import nil
 import tables, unicode
 import parazoa

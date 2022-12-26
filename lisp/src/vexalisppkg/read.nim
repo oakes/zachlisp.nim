@@ -1,4 +1,4 @@
-import ./types
+from ./types import ReadCell, ReadCellKind, ReadErrorKind, Cell, CellKind, ErrorKind, Token, hash, `==`, `<`, `<=`
 import unicode, tables, sets
 from parseutils import nil
 
