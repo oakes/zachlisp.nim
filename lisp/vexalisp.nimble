@@ -12,4 +12,4 @@ bin           = @["vexalisp"]
 # Dependencies
 
 requires "nim >= 1.6.8"
-requires "parazoa >= 0.6.0"
+requires "parazoa >= 0.7.0"
