@@ -312,7 +312,7 @@ func parse*(cells: seq[ReadCell]): seq[ReadCell] =
   while index < cells.len:
     result.add(parse(cells, index))
 
-template expandCells(readCells: seq[types.ReadCell]): seq[Cell] =
+template macroexpandCells(readCells: seq[ReadCell]): seq[Cell] =
   var cells: seq[Cell]
   for cell in readCells:
     let res = macroexpand(cell)
@@ -331,18 +331,18 @@ func macroexpand*(readCell: ReadCell): Cell =
     let typ = delimToType[delim]
     case typ:
     of List:
-      Cell(kind: List, listVal: expandCells(readCell.contents).toVec, token: readCell.token)
+      Cell(kind: List, listVal: macroexpandCells(readCell.contents).toVec, token: readCell.token)
     of Vector:
-      Cell(kind: Vector, vectorVal: expandCells(readCell.contents).toVec)
+      Cell(kind: Vector, vectorVal: macroexpandCells(readCell.contents).toVec)
     of HashMap:
-      let cells = expandCells(readCell.contents)
+      let cells = macroexpandCells(readCell.contents)
       var t = initMap[Cell, Cell]()
       for i in 0 ..< int(cells.len / 2):
         t = t.add(cells[i*2], cells[i*2+1])
       Cell(kind: HashMap, mapVal: t)
     of HashSet:
       var hs = initSet[Cell]()
-      for cell in expandCells(readCell.contents):
+      for cell in macroexpandCells(readCell.contents):
         hs = hs.incl(cell)
       Cell(kind: HashSet, setVal: hs)
     else:
