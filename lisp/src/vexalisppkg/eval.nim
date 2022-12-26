@@ -586,7 +586,7 @@ func initContext*(): types.Context =
     "values": Cell(kind: Fn, fnVal: values, fnStringVal: "values"),
   }.toMap
 
-func invoke*(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
+func invoke(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   if fn.kind == Fn:
     fn.fnVal(ctx, args)
   else:
