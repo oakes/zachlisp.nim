@@ -15,7 +15,7 @@ type
     None,
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
-    MustReadEvenNumberOfForms,
+    MustHaveEvenNumberOfForms,
     NothingValidAfter,
     NoMatchingUnquote,
     InvalidEscape,
@@ -61,7 +61,6 @@ type
     NotAFunction,
     InvalidType,
     InvalidNumberOfArguments,
-    MustHaveEvenNumberOfForms,
     IndexOutOfBounds,
     PrintLengthLimitExceeded,
   Cell* = object

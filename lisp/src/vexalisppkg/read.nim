@@ -187,7 +187,7 @@ func parseCollection*(cells: seq[ReadCell], index: var int, delimiter: ReadCell)
       if cell.token.value[0] == closeDelim:
         index += 1
         if delimiter.token.value[0] == '{' and contents.len mod 2 != 0:
-          return @[ReadCell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustReadEvenNumberOfForms)]
+          return @[ReadCell(kind: Collection, delims: @[delimiter, cell], contents: contents, error: MustHaveEvenNumberOfForms)]
         else:
           return @[ReadCell(kind: Collection, delims: @[delimiter, cell], contents: contents)]
       else:
@@ -236,7 +236,7 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
         let nextCell = nextCells[0]
         if cell.token.value[0] == hash and
             nextCell.kind == Collection and
-            nextCell.error in {None, MustReadEvenNumberOfForms}:
+            nextCell.error in {None, MustHaveEvenNumberOfForms}:
           var res = nextCells[0]
           res.delims[0].token.value = cell.token.value & res.delims[0].token.value
           if res.delims[0].token.value in validOpenDelims:
@@ -335,8 +335,6 @@ func macroexpand*(readCell: ReadCell): Cell =
     of Vector:
       Cell(kind: Vector, vectorVal: expandCells(readCell.contents).toVec)
     of HashMap:
-      if readCell.contents.len mod 2 != 0:
-        return Cell(kind: Error, error: MustHaveEvenNumberOfForms, token: readCell.token)
       let cells = expandCells(readCell.contents)
       var t = initMap[Cell, Cell]()
       for i in 0 ..< int(cells.len / 2):
