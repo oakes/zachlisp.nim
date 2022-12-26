@@ -20,42 +20,42 @@ template toDouble(cell: Cell) =
   else:
     return Cell(kind: Error, error: InvalidType, token: cell.token)
 
-template evalCells(ctx: types.Context, unevaledCells: seq[Cell]): seq[Cell] =
+template applyCells(fn: untyped, ctx: types.Context, origCells: seq[Cell]): seq[Cell] =
   var cells: seq[Cell]
-  for cell in unevaledCells:
-    let res = eval(ctx, cell)
+  for cell in origCells:
+    let res = fn(ctx, cell)
     if res.kind == Error:
       return res
     else:
       cells.add(res)
   cells
 
-template evalCells(ctx: types.Context, unevaledCells: Vec[Cell]): Vec[Cell] =
+template applyCells(fn: untyped, ctx: types.Context, origCells: Vec[Cell]): Vec[Cell] =
   var cells = initVec[Cell]()
-  for cell in unevaledCells:
-    let res = eval(ctx, cell)
+  for cell in origCells:
+    let res = fn(ctx, cell)
     if res.kind == Error:
       return res
     else:
       cells = cells.add(res)
   cells
 
-template evalCells(ctx: types.Context, unevaledCells: Map[Cell, Cell]): Map[Cell, Cell] =
+template applyCells(fn: untyped, ctx: types.Context, origCells: Map[Cell, Cell]): Map[Cell, Cell] =
   var cells = initMap[Cell, Cell]()
-  for (k, v) in unevaledCells.pairs:
-    let k2 = eval(ctx, k)
+  for (k, v) in origCells.pairs:
+    let k2 = fn(ctx, k)
     if k2.kind == Error:
       return k2
-    let v2 = eval(ctx, v)
+    let v2 = fn(ctx, v)
     if v2.kind == Error:
       return v2
     cells = cells.add(k2, v2)
   cells
 
-template evalCells(ctx: types.Context, unevaledCells: Set[Cell]): Set[Cell] =
+template applyCells(fn: untyped, ctx: types.Context, origCells: Set[Cell]): Set[Cell] =
   var cells = initSet[Cell]()
-  for cell in unevaledCells:
-    let res = eval(ctx, cell)
+  for cell in origCells:
+    let res = fn(ctx, cell)
     if res.kind == Error:
       return res
     else:
@@ -113,7 +113,7 @@ func nilPun(cell: Cell): Cell =
   else:
     cell
 
-# public functions
+# functions
 
 func eq*(ctx: types.Context, args: seq[Cell]): Cell =
   for i in 0 ..< args.len - 1:
@@ -561,6 +561,8 @@ func values*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkKind(cell, {HashMap})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values).toVec)
 
+# eval API
+
 func initContext*(): types.Context =
   result.printLimit = print.printLimit
   result.vars = {
@@ -616,10 +618,23 @@ func invoke(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: NotAFunction, token: fn.token)
 
-func eval*(ctx: types.Context, cell: Cell): Cell =
+func macroexpand*(ctx: types.Context, cell: Cell): Cell =
   case cell.kind:
   of List:
-    let cells = sequtils.toSeq(evalCells(ctx, cell.listVal).items)
+    Cell(kind: List, listVal: applyCells(macroexpand, ctx, cell.listVal))
+  of Vector:
+    Cell(kind: Vector, vectorVal: applyCells(macroexpand, ctx, cell.vectorVal))
+  of HashMap:
+    Cell(kind: HashMap, mapVal: applyCells(macroexpand, ctx, cell.mapVal))
+  of HashSet:
+    Cell(kind: HashSet, setVal: applyCells(macroexpand, ctx, cell.setVal))
+  else:
+    cell
+
+func evaluate*(ctx: types.Context, cell: Cell): Cell =
+  case cell.kind:
+  of List:
+    let cells = sequtils.toSeq(applyCells(evaluate, ctx, cell.listVal).items)
     if cells.len > 0:
       var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
       # set the token if it hasn't been set already
@@ -629,11 +644,11 @@ func eval*(ctx: types.Context, cell: Cell): Cell =
     else:
       cell
   of Vector:
-    Cell(kind: Vector, vectorVal: evalCells(ctx, cell.vectorVal))
+    Cell(kind: Vector, vectorVal: applyCells(evaluate, ctx, cell.vectorVal))
   of HashMap:
-    Cell(kind: HashMap, mapVal: evalCells(ctx, cell.mapVal))
+    Cell(kind: HashMap, mapVal: applyCells(evaluate, ctx, cell.mapVal))
   of HashSet:
-    Cell(kind: HashSet, setVal: evalCells(ctx, cell.setVal))
+    Cell(kind: HashSet, setVal: applyCells(evaluate, ctx, cell.setVal))
   of Symbol:
     if cell.symbolVal in ctx.vars:
       var ret = ctx.vars.get(cell.symbolVal)
@@ -643,6 +658,9 @@ func eval*(ctx: types.Context, cell: Cell): Cell =
       Cell(kind: Error, error: VarDoesNotExist, token: cell.token)
   else:
     cell
+
+func eval*(ctx: types.Context, cell: Cell): Cell =
+  evaluate(ctx, macroexpand(ctx, cell))
 
 func eval*(cell: Cell): Cell =
   var ctx = initContext()
