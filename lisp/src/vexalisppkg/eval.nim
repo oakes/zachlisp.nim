@@ -573,6 +573,7 @@ func defRuntime*(ctx: var types.Context, args: seq[Cell]): Cell =
     val = args[1]
   types.checkKind(sym, {Symbol})
   ctx.vars = ctx.vars.add(sym.symbolVal, val)
+  val
 
 # macros
 
