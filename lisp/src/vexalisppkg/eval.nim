@@ -118,6 +118,9 @@ func quote(cell: Cell): Cell =
   result.quoteVal.new
   result.quoteVal[] = cell
 
+func symbol(str: string): Cell =
+  Cell(kind: Symbol, symbolVal: str)
+
 # functions
 
 func eq*(ctx: var types.Context, args: seq[Cell]): Cell =
@@ -572,7 +575,7 @@ func defRuntime*(ctx: var types.Context, args: seq[Cell]): Cell =
     sym = args[0]
     val = args[1]
   types.checkKind(sym, {Symbol})
-  ctx.vars = ctx.vars.add(sym.symbolVal, val)
+  ctx.globals = ctx.globals.add(sym.symbolVal, val)
   val
 
 # macros
@@ -585,29 +588,41 @@ func def*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(sym, {Symbol})
   Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), val].toVec)
 
-func evaluate*(ctx: var types.Context, cell: Cell): Cell
+func evaluate*(ctx: var types.Context, cells: seq[Cell]): Cell
 
 func fn*(ctx: var types.Context, args: seq[Cell]): Cell =
-  types.checkCount(args.len, 2, 2)
+  types.checkCount(args.len, 2)
   let
     argsVec = args[0]
     argCount = argsVec.vectorVal.len
-    body = args[1]
+    body = args[1 ..< args.len]
   types.checkKind(argsVec, {Vector})
   for arg in argsVec.vectorVal:
     types.checkKind(arg, {Symbol})
   func anonFn(anonCtx: var types.Context, anonArgs: seq[Cell]): Cell =
     types.checkCount(anonArgs.len, argCount, argCount)
-    var localCtx = anonCtx
+    let oldLocals = anonCtx.locals
     for i in 0 ..< argCount:
-      let argName = argsVec.vectorVal.get(i).symbolVal
-      localCtx.vars = localCtx.vars.add(argName, anonArgs[i])
-    evaluate(localCtx, body)
+      let str = argsVec.vectorVal.get(i).symbolVal
+      anonCtx.locals = anonCtx.locals.add(str, anonArgs[i])
+    let res = evaluate(anonCtx, body)
+    anonCtx.locals = oldLocals
+    res
   let
-    argsWithFn = @[Cell(kind: Symbol, symbolVal: "fn")] & args
-    cell = Cell(kind: List, listVal: argsWithFn.toVec)
-    str = print.print(ctx, cell).stringVal
+    listContent = @[symbol("fn")] & args
+    list = Cell(kind: List, listVal: listContent.toVec)
+    str = print.print(ctx, list).stringVal
   Cell(kind: Fn, fnVal: anonFn, fnStringVal: str)
+
+func defn*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 3)
+  let
+    sym = args[0]
+    argsVec = args[1]
+    body = args[2 ..< args.len]
+    listContent = @[symbol("fn"), argsVec] & body
+    list = Cell(kind: List, listVal: listContent.toVec)
+  def(ctx, @[sym, list])
 
 func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
@@ -617,7 +632,7 @@ func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
 
 func initContext*(): types.Context =
   result.printLimit = print.printLimit
-  result.vars = {
+  result.globals = {
     "=": Cell(kind: Fn, fnVal: eq, fnStringVal: "="),
     ">": Cell(kind: Fn, fnVal: gt, fnStringVal: ">"),
     ">=": Cell(kind: Fn, fnVal: ge, fnStringVal: ">="),
@@ -666,6 +681,7 @@ func initContext*(): types.Context =
   result.specialMacros = {
     "def": Cell(kind: Macro, macroVal: def, macroStringVal: "def"),
     "fn": Cell(kind: Macro, macroVal: fn, macroStringVal: "fn"),
+    "defn": Cell(kind: Macro, macroVal: defn, macroStringVal: "defn"),
     "quote": Cell(kind: Macro, macroVal: quote, macroStringVal: "quote"),
   }.toMap
 
@@ -675,8 +691,8 @@ func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
     if name in ctx.specialMacros:
       outCell = ctx.specialMacros.get(name)
       return true
-    elif name in ctx.vars:
-      let resCell = ctx.vars.get(name)
+    elif name in ctx.globals:
+      let resCell = ctx.globals.get(name)
       if resCell.kind == Macro:
         outCell = resCell
         return true
@@ -694,7 +710,7 @@ func macroexpand*(ctx: var types.Context, cell: Cell): Cell =
       # set the token if it hasn't been set already
       if res.token.value == "":
         res.token = cell.token
-      res
+      macroexpand(ctx, res)
     else:
       Cell(kind: List, listVal: cellsVec, token: cell.token)
   of Vector:
@@ -732,8 +748,13 @@ func evaluate*(ctx: var types.Context, cell: Cell): Cell =
   of HashSet:
     Cell(kind: HashSet, setVal: applyCells(evaluate, ctx, cell.setVal))
   of Symbol:
-    if cell.symbolVal in ctx.vars:
-      var ret = ctx.vars.get(cell.symbolVal)
+    let str = cell.symbolVal
+    if str in ctx.locals:
+      var ret = ctx.locals.get(str)
+      ret.token = cell.token
+      ret
+    elif str in ctx.globals:
+      var ret = ctx.globals.get(str)
       ret.token = cell.token
       ret
     else:
@@ -742,6 +763,10 @@ func evaluate*(ctx: var types.Context, cell: Cell): Cell =
     cell.quoteVal[]
   else:
     cell
+
+func evaluate*(ctx: var types.Context, cells: seq[Cell]): Cell =
+  for cell in cells:
+    result = evaluate(ctx, cell)
 
 func eval*(ctx: var types.Context, cell: Cell): Cell =
   evaluate(ctx, macroexpand(ctx, cell))

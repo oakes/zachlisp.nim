@@ -437,4 +437,12 @@ test "fn":
   check eval.eval(read.read("(def f (fn [] \"foo\")) (f)")) == Cell(kind: String, stringVal: "foo")
   check eval.eval(read.read("(def f (fn [] \"foo\")) (f 1)")) == Cell(kind: Error, error: InvalidNumberOfArguments)
   check eval.eval(read.read("(def f (fn [:hi] \"foo\"))")) == Cell(kind: Error, error: InvalidType)
-  check eval.eval(read.read("(def f (fn [x] (* x x))) (f 2)")) == Cell(kind: Long, longVal: 4)
+  check eval.eval(read.read("(def f (fn [x] :this-is-ignored (* x x))) (f 2)")) == Cell(kind: Long, longVal: 4)
+  check eval.eval(read.read("(def f (fn [] (def foo :hi))) (f) foo")) == Cell(kind: Keyword, keywordVal: ":hi")
+
+test "defn":
+  check eval.eval(read.read("(defn f [] \"foo\") (f)")) == Cell(kind: String, stringVal: "foo")
+  check eval.eval(read.read("(defn f [] \"foo\") (f 1)")) == Cell(kind: Error, error: InvalidNumberOfArguments)
+  check eval.eval(read.read("(defn f [:hi] \"foo\")")) == Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(defn f [x] :this-is-ignored (* x x)) (f 2)")) == Cell(kind: Long, longVal: 4)
+  check eval.eval(read.read("(defn f [] (def foo :hi)) (f) foo")) == Cell(kind: Keyword, keywordVal: ":hi")

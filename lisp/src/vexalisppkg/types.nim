@@ -104,7 +104,8 @@ type
     token*: Token
   Context* = object
     printLimit*: int
-    vars*: Map[string, Cell]
+    globals*: Map[string, Cell]
+    locals*: Map[string, Cell]
     specialMacros*: Map[string, Cell]
 
 func `==`*(a, b: ReadCell): bool =
