@@ -120,41 +120,41 @@ func quote(cell: Cell): Cell =
 
 # functions
 
-func eq*(ctx: types.Context, args: seq[Cell]): Cell =
+func eq*(ctx: var types.Context, args: seq[Cell]): Cell =
   for i in 0 ..< args.len - 1:
     if args[i] != args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
-func ge*(ctx: types.Context, args: seq[Cell]): Cell =
+func ge*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] < args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
-func gt*(ctx: types.Context, args: seq[Cell]): Cell =
+func gt*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] <= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
-func le*(ctx: types.Context, args: seq[Cell]): Cell =
+func le*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] > args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
-func lt*(ctx: types.Context, args: seq[Cell]): Cell =
+func lt*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   for i in 0 ..< args.len - 1:
     if args[i] >= args[i+1]:
       return Cell(kind: Boolean, booleanVal: false)
   Cell(kind: Boolean, booleanVal: true)
 
-func min*(ctx: types.Context, args: seq[Cell]): Cell =
+func min*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   types.checkKind(args, {Long, Double})
   var res = args[0]
@@ -163,7 +163,7 @@ func min*(ctx: types.Context, args: seq[Cell]): Cell =
       res = arg
   res
 
-func max*(ctx: types.Context, args: seq[Cell]): Cell =
+func max*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   types.checkKind(args, {Long, Double})
   var res = args[0]
@@ -172,7 +172,7 @@ func max*(ctx: types.Context, args: seq[Cell]): Cell =
       res = arg
   res
 
-func plus*(ctx: types.Context, args: seq[Cell]): Cell =
+func plus*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 0
@@ -185,7 +185,7 @@ func plus*(ctx: types.Context, args: seq[Cell]): Cell =
       res += arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
-func minus*(ctx: types.Context, args: seq[Cell]): Cell =
+func minus*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   types.checkKind(args, {Long, Double})
   if isAllLongs(args):
@@ -199,7 +199,7 @@ func minus*(ctx: types.Context, args: seq[Cell]): Cell =
       res -= arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
-func times*(ctx: types.Context, args: seq[Cell]): Cell =
+func times*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(args, {Long, Double})
   if isAllLongs(args):
     var res: int64 = 1
@@ -212,7 +212,7 @@ func times*(ctx: types.Context, args: seq[Cell]): Cell =
       res *= arg.toDouble
     Cell(kind: Double, doubleVal: res)
 
-func divide*(ctx: types.Context, args: seq[Cell]): Cell =
+func divide*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   types.checkKind(args, {Long, Double})
   var res: float64 = args[0].toDouble
@@ -220,7 +220,7 @@ func divide*(ctx: types.Context, args: seq[Cell]): Cell =
     res /= arg.toDouble
   Cell(kind: Double, doubleVal: res)
 
-func isNaN*(ctx: types.Context, args: seq[Cell]): Cell =
+func isNaN*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   types.checkKind(cell, {Long, Double})
@@ -229,37 +229,37 @@ func isNaN*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Boolean, booleanVal: false)
 
-func `mod`*(ctx: types.Context, args: seq[Cell]): Cell =
+func `mod`*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal mod args[1].longVal)
 
-func pow*(ctx: types.Context, args: seq[Cell]): Cell =
+func pow*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.pow(args[0].toDouble, args[1].toDouble))
 
-func exp*(ctx: types.Context, args: seq[Cell]): Cell =
+func exp*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.exp(args[0].toDouble))
 
-func floor*(ctx: types.Context, args: seq[Cell]): Cell =
+func floor*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.floor(args[0].toDouble))
 
-func ceil*(ctx: types.Context, args: seq[Cell]): Cell =
+func ceil*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.ceil(args[0].toDouble))
 
-func sqrt*(ctx: types.Context, args: seq[Cell]): Cell =
+func sqrt*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   Cell(kind: Double, doubleVal: math.sqrt(args[0].toDouble))
 
-func abs*(ctx: types.Context, args: seq[Cell]): Cell =
+func abs*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   let arg = args[0]
@@ -268,7 +268,7 @@ func abs*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Double, doubleVal: abs(arg.toDouble))
 
-func signum*(ctx: types.Context, args: seq[Cell]): Cell =
+func signum*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long, Double})
   let arg = args[0]
@@ -277,23 +277,23 @@ func signum*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Long, longVal: math.sgn(arg.toDouble))
 
-func inc*(ctx: types.Context, args: seq[Cell]): Cell =
+func inc*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal + 1)
 
-func dec*(ctx: types.Context, args: seq[Cell]): Cell =
+func dec*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   types.checkKind(args, {Long})
   Cell(kind: Long, longVal: args[0].longVal - 1)
 
-func vec*(ctx: types.Context, args: seq[Cell]): Cell =
+func vec*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
   types.checkKind(cell, {List, Vector, HashMap, HashSet})
   Cell(kind: Vector, vectorVal: cell.toVec)
 
-func set*(ctx: types.Context, args: seq[Cell]): Cell =
+func set*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
   types.checkKind(cell, {List, Vector, HashMap, HashSet})
@@ -302,7 +302,7 @@ func set*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: HashSet, setVal: cell.toSet)
 
-func nth*(ctx: types.Context, args: seq[Cell]): Cell =
+func nth*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   let cell = args[0].nilPun
   types.checkKind(cell, {List, Vector, HashMap, HashSet})
@@ -342,7 +342,7 @@ func nth*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func count*(ctx: types.Context, args: seq[Cell]): Cell =
+func count*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0].nilPun
   types.checkKind(cell, {List, Vector, HashMap, HashSet})
@@ -358,7 +358,7 @@ func count*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func name*(ctx: types.Context, args: seq[Cell]): Cell =
+func name*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   types.checkKind(cell, {String, Keyword, Symbol})
@@ -394,19 +394,19 @@ func conj(cell: Cell, contents: seq[Cell]): Cell =
     return Cell(kind: Error, error: InvalidType, token: cell.token)
   res
 
-func conj*(ctx: types.Context, args: seq[Cell]): Cell =
+func conj*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2)
   let cell = args[0].nilPun
   types.checkKind(cell, {List, Vector, HashMap, HashSet})
   conj(cell, args[1 ..< args.len])
 
-func cons*(ctx: types.Context, args: seq[Cell]): Cell =
+func cons*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2)
   let lastCell = args[args.len-1].nilPun
   types.checkKind(lastCell, {List, Vector, HashMap, HashSet})
   Cell(kind: List, listVal: args[0 ..< args.len-1].toVec & lastCell.toVec)
 
-func disj*(ctx: types.Context, args: seq[Cell]): Cell =
+func disj*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
@@ -415,13 +415,13 @@ func disj*(ctx: types.Context, args: seq[Cell]): Cell =
   cell.setVal = cell.setVal.excl(args[1])
   cell
 
-func list*(ctx: types.Context, args: seq[Cell]): Cell =
+func list*(ctx: var types.Context, args: seq[Cell]): Cell =
   Cell(kind: List, listVal: args.toVec)
 
-func vector*(ctx: types.Context, args: seq[Cell]): Cell =
+func vector*(ctx: var types.Context, args: seq[Cell]): Cell =
   Cell(kind: Vector, vectorVal: args.toVec)
 
-func hashMap*(ctx: types.Context, args: seq[Cell]): Cell =
+func hashMap*(ctx: var types.Context, args: seq[Cell]): Cell =
   if args.len mod 2 != 0:
     return Cell(kind: Error, error: InvalidNumberOfArguments)
   var t = initMap[Cell, Cell]()
@@ -429,10 +429,10 @@ func hashMap*(ctx: types.Context, args: seq[Cell]): Cell =
     t = t.add(args[i*2], args[i*2+1])
   Cell(kind: HashMap, mapVal: t)
 
-func hashSet*(ctx: types.Context, args: seq[Cell]): Cell =
+func hashSet*(ctx: var types.Context, args: seq[Cell]): Cell =
   Cell(kind: HashSet, setVal: args.toSet)
 
-func get*(ctx: types.Context, args: seq[Cell]): Cell =
+func get*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 3)
   let
     cell = args[0].nilPun
@@ -467,7 +467,7 @@ func get*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func boolean*(ctx: types.Context, args: seq[Cell]): Cell =
+func boolean*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
@@ -478,7 +478,7 @@ func boolean*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Boolean, booleanVal: true)
 
-func long*(ctx: types.Context, args: seq[Cell]): Cell =
+func long*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
@@ -489,7 +489,7 @@ func long*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func double*(ctx: types.Context, args: seq[Cell]): Cell =
+func double*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   case cell.kind:
@@ -500,7 +500,7 @@ func double*(ctx: types.Context, args: seq[Cell]): Cell =
   else:
     Cell(kind: Error, error: InvalidType, token: cell.token)
 
-func concat*(ctx: types.Context, args: seq[Cell]): Cell =
+func concat*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   types.checkKind(args, {List, Vector, HashMap, HashSet, Nil})
   var ret = Cell(kind: Nil)
@@ -522,7 +522,7 @@ func concat*(ctx: types.Context, args: seq[Cell]): Cell =
       return Cell(kind: Error, error: InvalidType, token: cell.token)
   ret
 
-func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
+func assoc*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1)
   var cell = args[0]
   if args[0].kind == Nil: # nil pun
@@ -554,21 +554,19 @@ func assoc*(ctx: types.Context, args: seq[Cell]): Cell =
       return Cell(kind: Error, error: InvalidType, token: cell.token)
   cell
 
-func keys*(ctx: types.Context, args: seq[Cell]): Cell =
+func keys*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   types.checkKind(cell, {HashMap})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.keys).toVec)
 
-func values*(ctx: types.Context, args: seq[Cell]): Cell =
+func values*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   let cell = args[0]
   types.checkKind(cell, {HashMap})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values).toVec)
 
-# special functions
-
-func specialDef*(ctx: var types.Context, args: seq[Cell]): Cell =
+func defRuntime*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   let
     sym = args[0]
@@ -578,14 +576,13 @@ func specialDef*(ctx: var types.Context, args: seq[Cell]): Cell =
 
 # macros
 
-func macroDef*(ctx: types.Context, args: seq[Cell]): Cell =
+func def*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
   var
     sym = args[0]
     val = args[1]
   types.checkKind(sym, {Symbol})
-  let def = Cell(kind: SpecialFn, specialFnVal: specialDef, specialFnStringVal: "def")
-  Cell(kind: List, listVal: [def, quote(sym), val].toVec)
+  Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), val].toVec)
 
 # eval API
 
@@ -638,7 +635,7 @@ func initContext*(): types.Context =
     "values": Cell(kind: Fn, fnVal: values, fnStringVal: "values"),
   }.toMap
   result.specialMacros = {
-    "def": Cell(kind: Macro, macroVal: macroDef, macroStringVal: "def"),
+    "def": Cell(kind: Macro, macroVal: def, macroStringVal: "def"),
   }.toMap
 
 func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
@@ -654,7 +651,7 @@ func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
         return true
   false
 
-func macroexpand*(ctx: types.Context, cell: Cell): Cell =
+func macroexpand*(ctx: var types.Context, cell: Cell): Cell =
   case cell.kind:
   of List:
     let
@@ -682,8 +679,6 @@ func invokeFn(ctx: var types.Context, fn: Cell, args: seq[Cell]): Cell =
   case fn.kind:
   of Fn:
     fn.fnVal(ctx, args)
-  of SpecialFn:
-    fn.specialFnVal(ctx, args)
   else:
     Cell(kind: Error, error: NotAFunction, token: fn.token)
 

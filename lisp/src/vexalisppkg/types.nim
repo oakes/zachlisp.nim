@@ -50,7 +50,6 @@ type
     String,
     Keyword,
     Fn,
-    SpecialFn,
     Macro,
     List,
     Vector,
@@ -87,13 +86,10 @@ type
     of Keyword:
       keywordVal*: string
     of Fn:
-      fnVal*: proc (ctx: Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      fnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
       fnStringVal*: string
-    of SpecialFn:
-      specialFnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
-      specialFnStringVal*: string
     of Macro:
-      macroVal*: proc (ctx: Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      macroVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
       macroStringVal*: string
     of List:
       listVal*: Vec[Cell]
@@ -155,8 +151,6 @@ func hash*(a: Cell): Hash =
       a.keywordVal.hash
     of Fn:
       a.fnVal.hash
-    of SpecialFn:
-      a.specialFnVal.hash
     of Macro:
       a.macroVal.hash
     of List:
@@ -196,8 +190,6 @@ func `==`*(a, b: Cell): bool =
       a.keywordVal == b.keywordVal
     of Fn:
       a.fnVal == b.fnVal
-    of SpecialFn:
-      a.specialFnVal == b.specialFnVal
     of Macro:
       a.macroVal == b.macroVal
     of List:

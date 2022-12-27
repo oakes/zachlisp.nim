@@ -82,8 +82,6 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
     cell.keywordVal.toString(limit)
   of Fn:
     cell.fnStringVal.toString(limit)
-  of SpecialFn:
-    cell.specialFnStringVal.toString(limit)
   of Macro:
     cell.macroStringVal.toString(limit)
   of List:
@@ -101,7 +99,7 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   of Quote:
     print(cell.quoteVal[], shouldEscape, limit)
 
-func str*(ctx: types.Context, args: seq[Cell]): Cell =
+func str*(ctx: var types.Context, args: seq[Cell]): Cell =
   var
     limit = ctx.printLimit
     retCell = Cell(kind: String, stringVal: "")
@@ -112,10 +110,10 @@ func str*(ctx: types.Context, args: seq[Cell]): Cell =
     retCell.stringVal &= printedCell.stringVal
   retCell
 
-func print*(ctx: types.Context, args: seq[Cell]): Cell =
+func print*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   var limit = ctx.printLimit
   print(args[0], true, limit)
 
-func print*(ctx: types.Context, cell: types.Cell): Cell =
+func print*(ctx: var types.Context, cell: types.Cell): Cell =
   print(ctx, @[cell])
