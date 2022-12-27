@@ -579,11 +579,35 @@ func defRuntime*(ctx: var types.Context, args: seq[Cell]): Cell =
 
 func def*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2, 2)
-  var
+  let
     sym = args[0]
     val = args[1]
   types.checkKind(sym, {Symbol})
   Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), val].toVec)
+
+func evaluate*(ctx: var types.Context, cell: Cell): Cell
+
+func fn*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 2, 2)
+  let
+    argsVec = args[0]
+    argCount = argsVec.vectorVal.len
+    body = args[1]
+  types.checkKind(argsVec, {Vector})
+  for arg in argsVec.vectorVal:
+    types.checkKind(arg, {Symbol})
+  func anonFn(anonCtx: var types.Context, anonArgs: seq[Cell]): Cell =
+    types.checkCount(anonArgs.len, argCount, argCount)
+    var localCtx = anonCtx
+    for i in 0 ..< argCount:
+      let argName = argsVec.vectorVal.get(i).symbolVal
+      localCtx.vars = localCtx.vars.add(argName, anonArgs[i])
+    evaluate(localCtx, body)
+  let
+    argsWithFn = @[Cell(kind: Symbol, symbolVal: "fn")] & args
+    cell = Cell(kind: List, listVal: argsWithFn.toVec)
+    str = print.print(ctx, cell).stringVal
+  Cell(kind: Fn, fnVal: anonFn, fnStringVal: str)
 
 func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
@@ -641,6 +665,7 @@ func initContext*(): types.Context =
   }.toMap
   result.specialMacros = {
     "def": Cell(kind: Macro, macroVal: def, macroStringVal: "def"),
+    "fn": Cell(kind: Macro, macroVal: fn, macroStringVal: "fn"),
     "quote": Cell(kind: Macro, macroVal: quote, macroStringVal: "quote"),
   }.toMap
 

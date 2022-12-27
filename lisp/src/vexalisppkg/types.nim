@@ -49,12 +49,12 @@ type
     Symbol
     String,
     Keyword,
-    Fn,
-    Macro,
     List,
     Vector,
     HashMap,
     HashSet,
+    Fn,
+    Macro,
     Quote,
   ErrorKind* = enum
     NotImplemented,
@@ -85,12 +85,6 @@ type
       stringVal*: string
     of Keyword:
       keywordVal*: string
-    of Fn:
-      fnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
-      fnStringVal*: string
-    of Macro:
-      macroVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
-      macroStringVal*: string
     of List:
       listVal*: Vec[Cell]
     of Vector:
@@ -99,6 +93,12 @@ type
       mapVal*: Map[Cell, Cell]
     of HashSet:
       setVal*: Set[Cell]
+    of Fn:
+      fnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      fnStringVal*: string
+    of Macro:
+      macroVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      macroStringVal*: string
     of Quote:
       quoteVal*: ref Cell
     token*: Token
@@ -149,10 +149,6 @@ func hash*(a: Cell): Hash =
       a.stringVal.hash
     of Keyword:
       a.keywordVal.hash
-    of Fn:
-      a.fnVal.hash
-    of Macro:
-      a.macroVal.hash
     of List:
       a.listVal.hash
     of Vector:
@@ -161,6 +157,10 @@ func hash*(a: Cell): Hash =
       a.mapVal.hash
     of HashSet:
       a.setVal.hash
+    of Fn:
+      a.fnVal.hash
+    of Macro:
+      a.macroVal.hash
     of Quote:
       a.quoteVal[].hash
   var h = hash(a.kind)
@@ -188,10 +188,6 @@ func `==`*(a, b: Cell): bool =
       a.stringVal == b.stringVal
     of Keyword:
       a.keywordVal == b.keywordVal
-    of Fn:
-      a.fnVal == b.fnVal
-    of Macro:
-      a.macroVal == b.macroVal
     of List:
       a.listVal == b.listVal
     of Vector:
@@ -200,6 +196,10 @@ func `==`*(a, b: Cell): bool =
       a.mapVal == b.mapVal
     of HashSet:
       a.setVal == b.setVal
+    of Fn:
+      a.fnVal == b.fnVal
+    of Macro:
+      a.macroVal == b.macroVal
     of Quote:
       a.quoteVal[] == b.quoteVal[]
   else:

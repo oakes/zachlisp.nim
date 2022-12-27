@@ -432,3 +432,9 @@ test "quote":
     Cell(kind: Long, longVal: 1),
     Cell(kind: Long, longVal: 1),
   ].toVec)
+
+test "fn":
+  check eval.eval(read.read("(def f (fn [] \"foo\")) (f)")) == Cell(kind: String, stringVal: "foo")
+  check eval.eval(read.read("(def f (fn [] \"foo\")) (f 1)")) == Cell(kind: Error, error: InvalidNumberOfArguments)
+  check eval.eval(read.read("(def f (fn [:hi] \"foo\"))")) == Cell(kind: Error, error: InvalidType)
+  check eval.eval(read.read("(def f (fn [x] (* x x))) (f 2)")) == Cell(kind: Long, longVal: 4)
