@@ -82,6 +82,10 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
     cell.keywordVal.toString(limit)
   of Fn:
     cell.fnStringVal.toString(limit)
+  of SpecialFn:
+    cell.specialFnStringVal.toString(limit)
+  of Macro:
+    cell.macroStringVal.toString(limit)
   of List:
     limit -= 2
     Cell(kind: String, stringVal: "(" & printCells(cell.listVal, limit) & ")")
@@ -94,6 +98,8 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   of HashSet:
     limit -= 3
     Cell(kind: String, stringVal: "#{" & printCells(cell.setVal, limit) & "}")
+  of Quote:
+    print(cell.quoteVal[], shouldEscape, limit)
 
 func str*(ctx: types.Context, args: seq[Cell]): Cell =
   var

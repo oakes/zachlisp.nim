@@ -113,6 +113,11 @@ func nilPun(cell: Cell): Cell =
   else:
     cell
 
+func quote(cell: Cell): Cell =
+  result = Cell(kind: Quote)
+  result.quoteVal.new
+  result.quoteVal[] = cell
+
 # functions
 
 func eq*(ctx: types.Context, args: seq[Cell]): Cell =
@@ -561,6 +566,27 @@ func values*(ctx: types.Context, args: seq[Cell]): Cell =
   types.checkKind(cell, {HashMap})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values).toVec)
 
+# special functions
+
+func specialDef*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 2, 2)
+  let
+    sym = args[0]
+    val = args[1]
+  types.checkKind(sym, {Symbol})
+  ctx.vars = ctx.vars.add(sym.symbolVal, val)
+
+# macros
+
+func macroDef*(ctx: types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 2, 2)
+  var
+    sym = args[0]
+    val = args[1]
+  types.checkKind(sym, {Symbol})
+  let def = Cell(kind: SpecialFn, specialFnVal: specialDef, specialFnStringVal: "def")
+  Cell(kind: List, listVal: [def, quote(sym), val].toVec)
+
 # eval API
 
 func initContext*(): types.Context =
@@ -611,17 +637,38 @@ func initContext*(): types.Context =
     "keys": Cell(kind: Fn, fnVal: keys, fnStringVal: "keys"),
     "values": Cell(kind: Fn, fnVal: values, fnStringVal: "values"),
   }.toMap
+  result.specialMacros = {
+    "def": Cell(kind: Macro, macroVal: macroDef, macroStringVal: "def"),
+  }.toMap
 
-func invoke(ctx: types.Context, fn: Cell, args: seq[Cell]): Cell =
-  if fn.kind == Fn:
-    fn.fnVal(ctx, args)
-  else:
-    Cell(kind: Error, error: NotAFunction, token: fn.token)
+func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
+  if cell.kind == Symbol:
+    let name = cell.symbolVal
+    if name in ctx.specialMacros:
+      outCell = ctx.specialMacros.get(name)
+      return true
+    elif name in ctx.vars:
+      let resCell = ctx.vars.get(name)
+      if resCell.kind == Macro:
+        outCell = resCell
+        return true
+  false
 
 func macroexpand*(ctx: types.Context, cell: Cell): Cell =
   case cell.kind:
   of List:
-    Cell(kind: List, listVal: applyCells(macroexpand, ctx, cell.listVal))
+    let
+      cellsVec = applyCells(macroexpand, ctx, cell.listVal)
+      cells = sequtils.toSeq(cellsVec.items)
+    var macroCell: Cell
+    if cells.len > 0 and resolveMacro(ctx, cells[0], macroCell):
+      var res = macroCell.macroVal(ctx, cells[1 ..< cells.len])
+      # set the token if it hasn't been set already
+      if res.token.value == "":
+        res.token = cell.token
+      res
+    else:
+      Cell(kind: List, listVal: cellsVec, token: cell.token)
   of Vector:
     Cell(kind: Vector, vectorVal: applyCells(macroexpand, ctx, cell.vectorVal))
   of HashMap:
@@ -631,12 +678,21 @@ func macroexpand*(ctx: types.Context, cell: Cell): Cell =
   else:
     cell
 
-func evaluate*(ctx: types.Context, cell: Cell): Cell =
+func invokeFn(ctx: var types.Context, fn: Cell, args: seq[Cell]): Cell =
+  case fn.kind:
+  of Fn:
+    fn.fnVal(ctx, args)
+  of SpecialFn:
+    fn.specialFnVal(ctx, args)
+  else:
+    Cell(kind: Error, error: NotAFunction, token: fn.token)
+
+func evaluate*(ctx: var types.Context, cell: Cell): Cell =
   case cell.kind:
   of List:
     let cells = sequtils.toSeq(applyCells(evaluate, ctx, cell.listVal).items)
     if cells.len > 0:
-      var res = invoke(ctx, cells[0], cells[1 ..< cells.len])
+      var res = invokeFn(ctx, cells[0], cells[1 ..< cells.len])
       # set the token if it hasn't been set already
       if res.token.value == "":
         res.token = cell.token
@@ -656,10 +712,12 @@ func evaluate*(ctx: types.Context, cell: Cell): Cell =
       ret
     else:
       Cell(kind: Error, error: VarDoesNotExist, token: cell.token)
+  of Quote:
+    cell.quoteVal[]
   else:
     cell
 
-func eval*(ctx: types.Context, cell: Cell): Cell =
+func eval*(ctx: var types.Context, cell: Cell): Cell =
   evaluate(ctx, macroexpand(ctx, cell))
 
 func eval*(cell: Cell): Cell =

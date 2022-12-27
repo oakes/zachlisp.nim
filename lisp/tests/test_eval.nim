@@ -421,3 +421,10 @@ test "values":
     Cell(kind: String, stringVal: "hi"),
     Cell(kind: Long, longVal: 1),
   ].toVec)
+
+test "def":
+  var ctx = eval.initContext()
+  var res: Cell
+  for cell in read.read("(def a 1) (def b (* a 2)) (+ a b)"):
+    res = eval.eval(ctx, cell)
+  check res == Cell(kind: Long, longVal: 3)

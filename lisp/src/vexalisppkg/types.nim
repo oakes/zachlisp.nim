@@ -50,10 +50,13 @@ type
     String,
     Keyword,
     Fn,
+    SpecialFn,
+    Macro,
     List,
     Vector,
     HashMap,
     HashSet,
+    Quote,
   ErrorKind* = enum
     NotImplemented,
     InvalidToken,
@@ -86,6 +89,12 @@ type
     of Fn:
       fnVal*: proc (ctx: Context, cells: seq[Cell]): Cell {.noSideEffect.}
       fnStringVal*: string
+    of SpecialFn:
+      specialFnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      specialFnStringVal*: string
+    of Macro:
+      macroVal*: proc (ctx: Context, cells: seq[Cell]): Cell {.noSideEffect.}
+      macroStringVal*: string
     of List:
       listVal*: Vec[Cell]
     of Vector:
@@ -94,10 +103,13 @@ type
       mapVal*: Map[Cell, Cell]
     of HashSet:
       setVal*: Set[Cell]
+    of Quote:
+      quoteVal*: ref Cell
     token*: Token
   Context* = object
     printLimit*: int
     vars*: Map[string, Cell]
+    specialMacros*: Map[string, Cell]
 
 func `==`*(a, b: ReadCell): bool =
   if a.kind == b.kind:
@@ -143,6 +155,10 @@ func hash*(a: Cell): Hash =
       a.keywordVal.hash
     of Fn:
       a.fnVal.hash
+    of SpecialFn:
+      a.specialFnVal.hash
+    of Macro:
+      a.macroVal.hash
     of List:
       a.listVal.hash
     of Vector:
@@ -151,6 +167,8 @@ func hash*(a: Cell): Hash =
       a.mapVal.hash
     of HashSet:
       a.setVal.hash
+    of Quote:
+      a.quoteVal[].hash
   var h = hash(a.kind)
   h = h !& valHash
   !$h
@@ -178,6 +196,10 @@ func `==`*(a, b: Cell): bool =
       a.keywordVal == b.keywordVal
     of Fn:
       a.fnVal == b.fnVal
+    of SpecialFn:
+      a.specialFnVal == b.specialFnVal
+    of Macro:
+      a.macroVal == b.macroVal
     of List:
       a.listVal == b.listVal
     of Vector:
@@ -186,6 +208,8 @@ func `==`*(a, b: Cell): bool =
       a.mapVal == b.mapVal
     of HashSet:
       a.setVal == b.setVal
+    of Quote:
+      a.quoteVal[] == b.quoteVal[]
   else:
     false
 
