@@ -424,3 +424,4 @@ test "values":
 
 test "def":
   check eval.eval(read.read("(def a 1) (def b (* a 2)) (+ a b)")) == Cell(kind: Long, longVal: 3)
+  check eval.eval(read.read("(def def 2) (def x 2) (+ def x)")) == Cell(kind: Long, longVal: 4)
