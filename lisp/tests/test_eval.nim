@@ -446,3 +446,9 @@ test "defn":
   check eval.eval(read.read("(defn f [:hi] \"foo\")")) == Cell(kind: Error, error: InvalidType)
   check eval.eval(read.read("(defn f [x] :this-is-ignored (* x x)) (f 2)")) == Cell(kind: Long, longVal: 4)
   check eval.eval(read.read("(defn f [] (def foo :hi)) (f) foo")) == Cell(kind: Keyword, keywordVal: ":hi")
+
+test "macro":
+  check eval.eval(read.read("(def m (macro [] (list + 1 1))) (m)")) == Cell(kind: Long, longVal: 2)
+
+test "defmacro":
+  check eval.eval(read.read("(defmacro m [] (list + 1 1)) (m)")) == Cell(kind: Long, longVal: 2)

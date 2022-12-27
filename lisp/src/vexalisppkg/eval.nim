@@ -624,6 +624,23 @@ func defn*(ctx: var types.Context, args: seq[Cell]): Cell =
     list = Cell(kind: List, listVal: listContent.toVec)
   def(ctx, @[sym, list])
 
+func makro*(ctx: var types.Context, args: seq[Cell]): Cell =
+  let cell = fn(ctx, args)
+  if cell.kind == Fn:
+    Cell(kind: Macro, fnVal: cell.fnVal, fnStringVal: cell.fnStringVal)
+  else:
+    cell
+
+func defmacro*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 3)
+  let
+    sym = args[0]
+    argsVec = args[1]
+    body = args[2 ..< args.len]
+    listContent = @[symbol("macro"), argsVec] & body
+    list = Cell(kind: List, listVal: listContent.toVec)
+  Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), list].toVec)
+
 func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   quote(args[0])
@@ -679,10 +696,12 @@ func initContext*(): types.Context =
     "values": Cell(kind: Fn, fnVal: values, fnStringVal: "values"),
   }.toMap
   result.specialMacros = {
-    "def": Cell(kind: Macro, macroVal: def, macroStringVal: "def"),
-    "fn": Cell(kind: Macro, macroVal: fn, macroStringVal: "fn"),
-    "defn": Cell(kind: Macro, macroVal: defn, macroStringVal: "defn"),
-    "quote": Cell(kind: Macro, macroVal: quote, macroStringVal: "quote"),
+    "def": Cell(kind: Macro, fnVal: def, fnStringVal: "def"),
+    "fn": Cell(kind: Macro, fnVal: fn, fnStringVal: "fn"),
+    "defn": Cell(kind: Macro, fnVal: defn, fnStringVal: "defn"),
+    "macro": Cell(kind: Macro, fnVal: makro, fnStringVal: "macro"),
+    "defmacro": Cell(kind: Macro, fnVal: defmacro, fnStringVal: "defmacro"),
+    "quote": Cell(kind: Macro, fnVal: quote, fnStringVal: "quote"),
   }.toMap
 
 func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
@@ -706,7 +725,7 @@ func macroexpand*(ctx: var types.Context, cell: Cell): Cell =
       cells = sequtils.toSeq(cellsVec.items)
     var macroCell: Cell
     if cells.len > 0 and resolveMacro(ctx, cells[0], macroCell):
-      var res = macroCell.macroVal(ctx, cells[1 ..< cells.len])
+      var res = macroCell.fnVal(ctx, cells[1 ..< cells.len])
       # set the token if it hasn't been set already
       if res.token.value == "":
         res.token = cell.token

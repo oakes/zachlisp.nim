@@ -92,10 +92,8 @@ func print(cell: Cell, shouldEscape: bool, limit: var int): Cell =
   of HashSet:
     limit -= 3
     Cell(kind: String, stringVal: "#{" & printCells(cell.setVal, limit) & "}")
-  of Fn:
+  of Fn, Macro:
     cell.fnStringVal.toString(limit)
-  of Macro:
-    cell.macroStringVal.toString(limit)
   of Quote:
     print(cell.quoteVal[], shouldEscape, limit)
 

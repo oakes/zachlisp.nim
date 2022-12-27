@@ -93,12 +93,9 @@ type
       mapVal*: Map[Cell, Cell]
     of HashSet:
       setVal*: Set[Cell]
-    of Fn:
+    of Fn, Macro:
       fnVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
       fnStringVal*: string
-    of Macro:
-      macroVal*: proc (ctx: var Context, cells: seq[Cell]): Cell {.noSideEffect.}
-      macroStringVal*: string
     of Quote:
       quoteVal*: ref Cell
     token*: Token
@@ -158,10 +155,8 @@ func hash*(a: Cell): Hash =
       a.mapVal.hash
     of HashSet:
       a.setVal.hash
-    of Fn:
+    of Fn, Macro:
       a.fnVal.hash
-    of Macro:
-      a.macroVal.hash
     of Quote:
       a.quoteVal[].hash
   var h = hash(a.kind)
@@ -197,10 +192,8 @@ func `==`*(a, b: Cell): bool =
       a.mapVal == b.mapVal
     of HashSet:
       a.setVal == b.setVal
-    of Fn:
+    of Fn, Macro:
       a.fnVal == b.fnVal
-    of Macro:
-      a.macroVal == b.macroVal
     of Quote:
       a.quoteVal[] == b.quoteVal[]
   else:
