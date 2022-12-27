@@ -718,3 +718,13 @@ func eval*(ctx: var types.Context, cell: Cell): Cell =
 func eval*(cell: Cell): Cell =
   var ctx = initContext()
   eval(ctx, cell)
+
+func eval*(ctx: var types.Context, cells: seq[Cell]): Cell =
+  var res: Cell
+  for cell in cells:
+    res = eval(ctx, cell)
+  res
+
+func eval*(cells: seq[Cell]): Cell =
+  var ctx = initContext()
+  eval(ctx, cells)
