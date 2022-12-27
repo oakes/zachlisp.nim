@@ -585,6 +585,10 @@ func def*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(sym, {Symbol})
   Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), val].toVec)
 
+func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 1, 1)
+  quote(args[0])
+
 # eval API
 
 func initContext*(): types.Context =
@@ -637,6 +641,7 @@ func initContext*(): types.Context =
   }.toMap
   result.specialMacros = {
     "def": Cell(kind: Macro, macroVal: def, macroStringVal: "def"),
+    "quote": Cell(kind: Macro, macroVal: quote, macroStringVal: "quote"),
   }.toMap
 
 func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =

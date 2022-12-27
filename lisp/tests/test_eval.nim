@@ -425,3 +425,10 @@ test "values":
 test "def":
   check eval.eval(read.read("(def a 1) (def b (* a 2)) (+ a b)")) == Cell(kind: Long, longVal: 3)
   check eval.eval(read.read("(def def 2) (def x 2) (+ def x)")) == Cell(kind: Long, longVal: 4)
+
+test "quote":
+  check eval.eval(read.read("(quote (+ 1 1))")) == Cell(kind: List, listVal: [
+    Cell(kind: Symbol, symbolVal: "+"),
+    Cell(kind: Long, longVal: 1),
+    Cell(kind: Long, longVal: 1),
+  ].toVec)
