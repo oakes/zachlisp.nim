@@ -15,7 +15,7 @@ type
     None,
     NoMatchingOpenDelimiter,
     NoMatchingCloseDelimiter,
-    MustHaveEvenNumberOfForms,
+    MapMustHaveEvenNumberOfForms,
     NothingValidAfter,
     NoMatchingUnquote,
     InvalidEscape,

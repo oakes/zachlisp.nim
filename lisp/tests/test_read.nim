@@ -188,7 +188,7 @@ test "parsing":
         ReadCell(kind: Value, value: Cell(kind: Long), token: Token(value: "1")),
         ReadCell(kind: Value, value: Cell(kind: Keyword), token: Token(value: ":bar")),
       ],
-      error: MustHaveEvenNumberOfForms,
+      error: MapMustHaveEvenNumberOfForms,
     ),
   ]
   check read.parse(read.lex("#(+ 1 1)")) == @[
