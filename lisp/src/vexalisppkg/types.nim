@@ -63,6 +63,7 @@ type
     NotAFunction,
     InvalidType,
     InvalidNumberOfArguments,
+    LetMustHaveEvenNumberOfForms,
     IndexOutOfBounds,
     PrintLengthLimitExceeded,
   Cell* = object

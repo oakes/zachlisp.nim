@@ -624,7 +624,7 @@ func defn*(ctx: var types.Context, args: seq[Cell]): Cell =
     list = Cell(kind: List, listVal: listContent.toVec)
   def(ctx, @[sym, list])
 
-func makro*(ctx: var types.Context, args: seq[Cell]): Cell =
+func macrox*(ctx: var types.Context, args: seq[Cell]): Cell =
   let cell = fn(ctx, args)
   if cell.kind == Fn:
     Cell(kind: Macro, fnVal: cell.fnVal, fnStringVal: cell.fnStringVal)
@@ -644,6 +644,28 @@ func defmacro*(ctx: var types.Context, args: seq[Cell]): Cell =
 func quote*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 1, 1)
   quote(args[0])
+
+func letx*(ctx: var types.Context, args: seq[Cell]): Cell =
+  types.checkCount(args.len, 1)
+  let
+    localsVec = args[0]
+    body = args[1 ..< args.len]
+  types.checkKind(localsVec, {Vector})
+  let locals = localsVec.vectorVal
+  if locals.len mod 2 != 0:
+    return Cell(kind: Error, error: LetMustHaveEvenNumberOfForms)
+  let oldLocals = ctx.locals
+  func anonFn(anonCtx: var types.Context, anonArgs: seq[Cell]): Cell =
+    for i in 0 ..< int(locals.len / 2):
+      let
+        sym = locals.get(i*2)
+        val = locals.get(i*2+1)
+      types.checkKind(sym, {Symbol})
+      anonCtx.locals = anonCtx.locals.add(sym.symbolVal, val)
+    let res = evaluate(anonCtx, body)
+    anonCtx.locals = oldLocals
+    res
+  Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: anonFn)].toVec)
 
 # eval API
 
@@ -699,9 +721,10 @@ func initContext*(): types.Context =
     "def": Cell(kind: Macro, fnVal: def, fnStringVal: "def"),
     "fn": Cell(kind: Macro, fnVal: fn, fnStringVal: "fn"),
     "defn": Cell(kind: Macro, fnVal: defn, fnStringVal: "defn"),
-    "macro": Cell(kind: Macro, fnVal: makro, fnStringVal: "macro"),
+    "macro": Cell(kind: Macro, fnVal: macrox, fnStringVal: "macro"),
     "defmacro": Cell(kind: Macro, fnVal: defmacro, fnStringVal: "defmacro"),
     "quote": Cell(kind: Macro, fnVal: quote, fnStringVal: "quote"),
+    "let": Cell(kind: Macro, fnVal: letx, fnStringVal: "let"),
   }.toMap
 
 func resolveMacro(ctx: types.Context, cell: Cell, outCell: var Cell): bool =
