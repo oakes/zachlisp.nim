@@ -347,6 +347,14 @@ func macroexpand*(readCell: ReadCell): Cell =
       Cell(kind: HashSet, setVal: hs)
     else:
       Cell(kind: Error, error: NotImplemented, token: readCell.token)
+  of SpecialPair:
+    let
+      left = readCell.pair[0]
+      right = readCell.pair[1]
+    if left.kind == SpecialCharacter:
+      if left.token.value == "'":
+        return Cell(kind: List, listVal: [Cell(kind: Symbol, symbolVal: "quote"), macroexpand(right)].toVec)
+    Cell(kind: Error, error: NotImplemented, token: readCell.token)
   of Value:
     var ret = readCell.value
     ret.token = readCell.token

@@ -1,6 +1,7 @@
 import unittest
 from vexalisppkg/types import CellKind, ErrorKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, Token, `==`
 from vexalisppkg/read import nil
+import parazoa
 
 test "lexing":
   check read.lex("1 1") == @[
@@ -263,3 +264,14 @@ test "parsing":
       ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: "hello")),
     ]),
   ]
+
+test "macroexpanding":
+  check read.read("(list '+ 1 1)")[0] == Cell(
+    kind: List,
+    listVal: [
+      Cell(kind: Symbol, symbolVal: "list"),
+      Cell(kind: List, listVal: [Cell(kind: Symbol, symbolVal: "quote"), Cell(kind: Symbol, symbolVal: "+")].toVec),
+      Cell(kind: Long, longVal: 1),
+      Cell(kind: Long, longVal: 1),
+    ].toVec,
+  )
