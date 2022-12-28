@@ -253,9 +253,9 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
               res.token.position = cell.token.position
               return @[res]
             else:
-              return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], error: InvalidSpecialLiteral)]
+              return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], token: cell.token, error: InvalidSpecialLiteral)]
           else:
-            return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell])]
+            return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], token: cell.token)]
       var res = cell
       res.error = NothingValidAfter
       @[res] & nextCells
