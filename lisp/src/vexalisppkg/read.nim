@@ -234,7 +234,7 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
       let nextCells = parse(cells, index)
       if nextCells.len == 1:
         let nextCell = nextCells[0]
-        if cell.token.value[0] == hash and
+        if cell.token.value == "#" and
             nextCell.kind == Collection and
             nextCell.error in {None, MapMustHaveEvenNumberOfForms}:
           var res = nextCells[0]
@@ -246,7 +246,8 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
             res.error = InvalidDelimiter
           return @[res]
         elif nextCell.error == None:
-          if cell.token.value == "##":
+          case cell.token.value:
+          of "##":
             let combinedValue = cell.token.value & nextCell.token.value
             if combinedValue in specialSyms:
               var res = specialSyms[combinedValue]
@@ -254,6 +255,8 @@ func parse*(cells: seq[ReadCell], index: var int): seq[ReadCell] =
               return @[res]
             else:
               return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], token: cell.token, error: InvalidSpecialLiteral)]
+          of "#_":
+            return @[]
           else:
             return @[ReadCell(kind: SpecialPair, pair: @[cell, nextCell], token: cell.token)]
       var res = cell
@@ -352,8 +355,11 @@ func macroexpand*(readCell: ReadCell): Cell =
       left = readCell.pair[0]
       right = readCell.pair[1]
     if left.kind == SpecialCharacter:
-      if left.token.value == "'":
+      case left.token.value:
+      of "'":
         return Cell(kind: List, listVal: [Cell(kind: Symbol, symbolVal: "quote"), macroexpand(right)].toVec)
+      else:
+        discard
     Cell(kind: Error, error: NotImplemented, token: readCell.token)
   of Value:
     var ret = readCell.value

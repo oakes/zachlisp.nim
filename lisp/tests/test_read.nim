@@ -168,6 +168,7 @@ test "parsing":
   ]
   check read.parse(read.lex("""{:foo 1 :bar 2
 ;; this tests to make sure comments aren't counted when checking for even number of forms
+#_123
 }""")) == @[
     ReadCell(
       kind: Collection,
@@ -258,12 +259,7 @@ test "parsing":
     ]),
     ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: "hello")),
   ]
-  check read.parse(read.lex("#_hello")) == @[
-    ReadCell(kind: SpecialPair, pair: @[
-      ReadCell(kind: SpecialCharacter, token: Token(value: "#_")),
-      ReadCell(kind: Value, value: Cell(kind: Symbol), token: Token(value: "hello")),
-    ]),
-  ]
+  check read.parse(read.lex("#_hello")).len == 0
 
 test "macroexpanding":
   check read.read("(list '+ 1 1)")[0] == Cell(
