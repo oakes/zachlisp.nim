@@ -456,4 +456,4 @@ test "defmacro":
 test "let":
   check eval.eval(read.read("(let [a])")) == Cell(kind: Error, error: LetMustHaveEvenNumberOfForms)
   check eval.eval(read.read("(let [a 1] a)")) == Cell(kind: Long, longVal: 1)
-  check eval.eval(read.read("(let [a 1 b 2] (let [c 3] (+ a b c)))")) == Cell(kind: Long, longVal: 6)
+  check eval.eval(read.read("(let [a 1 b (+ 1 1)] (let [c 3] (+ a b c)))")) == Cell(kind: Long, longVal: 6)

@@ -569,14 +569,29 @@ func values*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkKind(cell, {HashMap})
   Cell(kind: Vector, vectorVal: sequtils.toSeq(cell.mapVal.values).toVec)
 
-func defRuntime*(ctx: var types.Context, args: seq[Cell]): Cell =
-  types.checkCount(args.len, 2, 2)
+func defRuntime(ctx: var types.Context, args: seq[Cell]): Cell =
   let
     sym = args[0]
     val = args[1]
   types.checkKind(sym, {Symbol})
   ctx.globals = ctx.globals.add(sym.symbolVal, val)
   val
+
+func evaluate*(ctx: var types.Context, cells: seq[Cell]): Cell
+
+func letRuntime(ctx: var types.Context, args: seq[Cell]): Cell =
+  let
+    oldLocals = ctx.locals
+    locals = args[0].vectorVal
+    body = sequtils.toSeq(args[1].vectorVal.items)
+  for i in 0 ..< int(locals.len / 2):
+    let
+      sym = locals.get(i*2)
+      val = locals.get(i*2+1)
+    ctx.locals = ctx.locals.add(sym.symbolVal, val)
+  let res = evaluate(ctx, body)
+  ctx.locals = oldLocals
+  res
 
 # macros
 
@@ -587,8 +602,6 @@ func def*(ctx: var types.Context, args: seq[Cell]): Cell =
     val = args[1]
   types.checkKind(sym, {Symbol})
   Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: defRuntime, fnStringVal: "def"), quote(sym), val].toVec)
-
-func evaluate*(ctx: var types.Context, cells: seq[Cell]): Cell
 
 func fn*(ctx: var types.Context, args: seq[Cell]): Cell =
   types.checkCount(args.len, 2)
@@ -650,22 +663,30 @@ func letx*(ctx: var types.Context, args: seq[Cell]): Cell =
   let
     localsVec = args[0]
     body = args[1 ..< args.len]
+  # error checking
   types.checkKind(localsVec, {Vector})
   let locals = localsVec.vectorVal
   if locals.len mod 2 != 0:
     return Cell(kind: Error, error: LetMustHaveEvenNumberOfForms)
-  let oldLocals = ctx.locals
-  func anonFn(anonCtx: var types.Context, anonArgs: seq[Cell]): Cell =
-    for i in 0 ..< int(locals.len / 2):
-      let
-        sym = locals.get(i*2)
-        val = locals.get(i*2+1)
-      types.checkKind(sym, {Symbol})
-      anonCtx.locals = anonCtx.locals.add(sym.symbolVal, val)
-    let res = evaluate(anonCtx, body)
-    anonCtx.locals = oldLocals
-    res
-  Cell(kind: List, listVal: [Cell(kind: Fn, fnVal: anonFn)].toVec)
+  # quote the symbols and the body
+  var quotedLocals: seq[Cell]
+  for i in 0 ..< int(locals.len / 2):
+    let
+      sym = locals.get(i*2)
+      val = locals.get(i*2+1)
+    types.checkKind(sym, {Symbol})
+    quotedLocals.add(quote(sym))
+    quotedLocals.add(val)
+  var quotedBody: seq[Cell]
+  for form in body:
+    quotedBody.add(quote(form))
+  # return runtime function
+  let listContent = @[
+    Cell(kind: Fn, fnVal: letRuntime),
+    Cell(kind: Vector, vectorVal: quotedLocals.toVec),
+    Cell(kind: Vector, vectorVal: quotedBody.toVec),
+  ]
+  Cell(kind: List, listVal: listContent.toVec)
 
 # eval API
 
