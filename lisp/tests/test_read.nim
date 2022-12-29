@@ -261,7 +261,7 @@ test "parsing":
   ]
   check read.parse(read.lex("#_hello")).len == 0
 
-test "macroexpanding":
+test "macroexpanding special characters":
   check read.read("(list '+ 1 1)")[0] == Cell(
     kind: List,
     listVal: [
