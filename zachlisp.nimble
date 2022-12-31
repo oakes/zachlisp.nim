@@ -3,7 +3,7 @@
 version       = "0.1.0"
 author        = "oakes"
 description   = "FIXME"
-license       = "FIXME"
+license       = "Public Domain"
 srcDir        = "src"
 installExt    = @["nim"]
 bin           = @["zachlisp"]
