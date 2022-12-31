@@ -1,6 +1,6 @@
 import unittest
-from vexalisppkg/types import CellKind, ErrorKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, Token, `==`
-from vexalisppkg/read import nil
+from zachlisppkg/types import CellKind, ErrorKind, Cell, ReadCellKind, ReadErrorKind, ReadCell, Token, `==`
+from zachlisppkg/read import nil
 import parazoa
 
 test "lexing":

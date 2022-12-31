@@ -1,7 +1,7 @@
-from ./vexalisppkg/read import nil
-from ./vexalisppkg/eval import nil
-from ./vexalisppkg/print import nil
-from ./vexalisppkg/types import nil
+from ./zachlisppkg/read import nil
+from ./zachlisppkg/eval import nil
+from ./zachlisppkg/print import nil
+from ./zachlisppkg/types import nil
 
 when isMainModule:
   var ctx = eval.initContext()
