@@ -133,7 +133,7 @@ func hash*(a: Cell): Hash =
     of Error:
       a.error.hash
     of Nil:
-      nil.hash
+      hash(cast[pointer](nil))
     of Boolean:
       a.booleanVal.hash
     of Long:
